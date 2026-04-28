@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - routes/
+
+    # レベル5は軽めかつ実用的
+    level: 5
+
+    # CI / ローカルの PHP メモリ制限が低い場合の対応
+    parallel:
+        maximumNumberOfProcesses: 1
+
+    ignoreErrors:
+
+    excludePaths:
+        - vendor/

@@ -1,0 +1,67 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: exapp-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - exapp-network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: exapp-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-exapp}
+      MYSQL_USER: ${DB_USERNAME:-exapp}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - exapp-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: exapp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - exapp-network
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  redis-data:
+
+networks:
+  exapp-network:
+    driver: bridge
