@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly SubjectRepositoryInterface $subjectRepository,
+    ) {}
+
     public function register(Request $request): JsonResponse
     {
         $request->validate([
@@ -23,6 +28,8 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => $request->password,
         ]);
+
+        $this->subjectRepository->seedDefaults($user->id);
 
         $token = $user->createToken('api')->plainTextToken;
 
