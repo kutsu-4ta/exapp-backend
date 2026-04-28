@@ -18,7 +18,7 @@ class HealthCheckTest extends TestCase
             ])
             ->assertJson([
                 'status' => 'ok',
-                'service' => 'bunk-api',
+                'service' => 'exapp-api',
             ]);
     }
 }

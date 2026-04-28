@@ -1,59 +1,68 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 資格勉強アプリ 要件定義案
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 中小企業診断士特化
 
-## About Laravel
+1. 背景と目的
+* 背景: 学習開始2ヶ月が経過し、物理的なテキスト・ノート・iOSメモに分散した情報（学習ログ、苦手論点、ミス原因）の管理コストが増大している。
+* 課題: 机に向かっている貴重な時間に「情報の整理」や「分析」の作業が入り込み、演習効率を下げている。また、既存の汎用ツール（Notion等）では構造が煩雑になり、入力・管理のオーバーヘッドが大きい。
+* 目的: 物理的な「書く」プロセスを維持しつつ、情報をデジタルに集約。「机では演習に全振り、出先で弱点克服とプランニング」を完璧に使い分ける環境を作る。
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+2. 解決すべき現行の運用フロー
+   システム化にあたり、以下の具体的で物理的な運用をデータとして統合する。
+   ① 学習ログと進捗管理
+* 固定ブロック制の記録: 早朝・昼・通勤・深夜のブロックごとの「予定時間」と「実際時間」の対比。
+* 教材別ステータス: 「テキスト完」「問題集2周」「スピード問題集未着手」といった、科目ごとの教材進捗深度の可視化。
+  ② 独自のミス分析（最重要データ）
+  テキストやノートで行っている以下のタグ付け・整理を、デジタル上で活用可能にする。
+* 3種類の失敗原因タグ: 1. 定義漏れ: 知識不足（暗記で解決すべきもの） 2. 解法ミス: 手順・パターンの未習得（理解で解決すべきもの） 3. 計算ミス: ケアレスミス（精度向上の課題）
+* 問題評価と履歴: 「良問」フラグ、解いた日付、習熟度（○、×、△）の記録。
+* 苦手リスト: 苦手な論点リストと、それに紐づく問題集の演習番号のリンク。
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+3. UX・設計構想
+   UXコンセプト: 「Obsidianライクな自由度 × 診断士特有の構造化」
+* デイリー・ワークスペース:
+    * 1日の活動を1画面で書き込めるワークスペース。iOSメモやObsidianのように、テキストベースでラフに記述できるが、科目や時間はシステムが自動抽出・集計する。
+    * 1日の終わりに「完了」することで、その日のデータが統計に反映される（過去の編集も可能）。
+* カード型・弱点復習ビュー:
+    * 出先や隙間時間に、「財務の計算ミス」や「経済の良問」だけを抽出して表示。
+    * ノートに手書きした図解や思考プロセスを写真で紐付け、即座に確認できる。
+      AI (Gemini) 連携機能
+* 学習ログの多角的分離・分析:
+    * 蓄積された「失敗原因タグ」を分析し、「今週は解法ミスが多いため、演習よりプロセスの再確認を優先すべき」といったアドバイスを生成。
+    * 過去問の「A/Bランク取りこぼし」データから、目標点数（例：70点ライン）に到達するために埋めるべき最短経路を提示。
+* セキュアなAPI連携: * Gemini API（無料枠）を活用。APIキー漏洩防止のため、APIサーバーを介した構成でプロンプトを制御。
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+4. 設計構成まとめ
+   項目	内容
+   入力	テキストベースのデイリーログ（手書きノートの写真添付を含む）
+   管理項目	科目別時間、正誤（○×△）、失敗原因（定義・解法・計算）、教材進捗
+   UX	常時開けるワークスペース ＋ 隙間時間用の抽出ビュー
+   AI活用	ログからの学習傾向分析、苦手論点の抽出、プランニング支援
+   目指す状態	机では1秒も管理作業をせず、スマホが「次やるべきこと」を知っている状態
 
-## Learning Laravel
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# 開発
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## CI
 
-## Laravel Sponsors
+GitHub Actions で以下を自動実行:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- **Frontend**: lint → typecheck → format check → build（`frontend/**` 変更時）
+- **Backend**: pint (lint) → phpstan (静的解析) → phpunit (テスト)（`backend/**` 変更時）
 
-### Premium Partners
+### Frontend CI の注意点
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+`eslint-config-prettier` と `prettier` は `devDependencies` に含まれている必要がある（`eslint.config.mjs` と `format:check` スクリプトで使用）。
 
-## Contributing
+### Backend CI の注意点
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+`phpunit.xml` に `APP_KEY` を `force="true"` で定義しているため、`.env` の `APP_KEY` が空の状態でもテストが動作する。
+テストスイートは `tests/Feature/HealthCheckTest.php`（API ヘルスチェック）と `tests/Unit/ExampleTest.php` のみ。
 
-## Code of Conduct
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## アプリが一次リリースする前にモノリポを解消する
+現在は開発段階で、構成が大きく変わることを踏まえて、コードベースの解析の運用上の都合で、バックエンド、フロントエンドのモノリポとしている。
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## プロジェクト状況
+以前の「exapp」という別アプリの技術スタックと同等のため、このソースを書き換えることで開発の基盤構築コストを下げる。
+本アプリは論理名・物理名ともに「exapp」である。
