@@ -3,9 +3,10 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MonthlySettingController;
 use App\Http\Controllers\ProblemController;
 use App\Http\Controllers\StudySessionController;
-use App\Http\Controllers\SubjectController;
+use App\Http\Controllers\SubCategoryController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -19,11 +20,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
 
-    // 科目マスタ
-    Route::get('subjects', [SubjectController::class, 'index']);
-    Route::post('subjects', [SubjectController::class, 'store']);
-    Route::put('subjects/{id}', [SubjectController::class, 'update']);
-    Route::delete('subjects/{id}', [SubjectController::class, 'destroy']);
+    // 小分類
+    Route::get('sub-categories', [SubCategoryController::class, 'index']);
+    Route::post('sub-categories', [SubCategoryController::class, 'store']);
+    Route::put('sub-categories/{id}', [SubCategoryController::class, 'update']);
+    Route::delete('sub-categories/{id}', [SubCategoryController::class, 'destroy']);
+
+    // 月間設定
+    Route::get('monthly-settings/{year}/{month}', [MonthlySettingController::class, 'show']);
+    Route::put('monthly-settings/{year}/{month}', [MonthlySettingController::class, 'upsert']);
 
     // デイリーログ
     Route::get('daily-logs', [DailyLogController::class, 'index']);

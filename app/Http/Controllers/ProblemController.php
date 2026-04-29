@@ -25,7 +25,6 @@ class ProblemController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
         $user = $request->user() ?? auth('sanctum')->user();
 
         if (!$user) {
@@ -39,11 +38,18 @@ class ProblemController extends Controller
 
     public function store(CreateProblemRequest $request): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $validated = $request->validated();
         $problem = ($this->createUseCase)(
-            $request->user()->id,
+            $user->id,
             [
-                'subject_id' => $validated['subjectId'],
+                'subject' => $validated['subject'],
+                'sub_category_id' => $validated['subCategoryId'] ?? null,
                 'material' => $validated['material'],
                 'question_ref' => $validated['questionRef'],
                 'note' => $validated['note'] ?? null,
@@ -59,7 +65,6 @@ class ProblemController extends Controller
 
     public function update(UpdateProblemRequest $request, int $id): JsonResponse
     {
-        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
         $user = $request->user() ?? auth('sanctum')->user();
 
         if (!$user) {
@@ -71,7 +76,8 @@ class ProblemController extends Controller
             $user->id,
             $id,
             [
-                'subject_id' => $validated['subjectId'],
+                'subject' => $validated['subject'],
+                'sub_category_id' => $validated['subCategoryId'] ?? null,
                 'material' => $validated['material'],
                 'question_ref' => $validated['questionRef'],
                 'note' => $validated['note'] ?? null,
@@ -87,7 +93,6 @@ class ProblemController extends Controller
 
     public function destroy(Request $request, int $id): Response
     {
-        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
         $user = $request->user() ?? auth('sanctum')->user();
 
         if (!$user) {

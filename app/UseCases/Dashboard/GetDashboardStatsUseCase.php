@@ -4,7 +4,6 @@ namespace App\UseCases\Dashboard;
 
 use App\Models\DailyLog;
 use App\Models\StudySession;
-use App\Models\Subject;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -19,22 +18,14 @@ class GetDashboardStatsUseCase
         $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
         $thirtyDaysAgo = $now->copy()->subDays(29)->toDateString();
 
-        $thisMonthMinutes = $this->thisMonthMinutes($userId, $year, $month);
-        $thisMonthDays = $this->thisMonthDays($userId, $year, $month);
-        $last7DaysMinutes = $this->last7DaysMinutes($userId, $sevenDaysAgo, $today);
-        $weeklyAvgMinutes = $this->weeklyAvgMinutes($thisMonthMinutes, $now);
-        $subjectMinutes = $this->subjectMinutes($userId, $year, $month);
-        $lastTouchedBySubject = $this->lastTouchedBySubject($userId);
-        $dailyMinutes = $this->dailyMinutes($userId, $thirtyDaysAgo, $today);
-
         return [
-            'thisMonthMinutes' => $thisMonthMinutes,
-            'thisMonthDays' => $thisMonthDays,
-            'last7DaysMinutes' => $last7DaysMinutes,
-            'weeklyAvgMinutes' => $weeklyAvgMinutes,
-            'subjectMinutes' => $subjectMinutes,
-            'lastTouchedBySubject' => $lastTouchedBySubject,
-            'dailyMinutes' => $dailyMinutes,
+            'thisMonthMinutes' => $this->thisMonthMinutes($userId, $year, $month),
+            'thisMonthDays' => $this->thisMonthDays($userId, $year, $month),
+            'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
+            'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
+            'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
+            'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
+            'dailyMinutes' => $this->dailyMinutes($userId, $thirtyDaysAgo, $today),
         ];
     }
 
@@ -78,14 +69,15 @@ class GetDashboardStatsUseCase
     private function subjectMinutes(int $userId, int $year, int $month): array
     {
         return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            // subjects テーブルを結合して名前を取得するように変更
             ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
             ->where('daily_logs.user_id', $userId)
             ->whereYear('daily_logs.date', $year)
             ->whereMonth('daily_logs.date', $month)
-            ->groupBy('subjects.id', 'subjects.name')
+            ->groupBy('subjects.id', 'subjects.name') // subject_id または name でグループ化
             ->orderByDesc(DB::raw('SUM(study_sessions.minutes)'))
             ->get([
-                'subjects.name as subject',
+                'subjects.name as subject', // 名前をエイリアスで取得
                 DB::raw('SUM(study_sessions.minutes) as minutes'),
             ])
             ->map(fn ($row) => [
@@ -97,24 +89,24 @@ class GetDashboardStatsUseCase
 
     private function lastTouchedBySubject(int $userId): array
     {
-        $touched = StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
-            ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
-            ->where('daily_logs.user_id', $userId)
-            ->groupBy('subjects.id', 'subjects.name')
+        // subjects はマスターデータ（user_idなし）になったため、
+        // where('s.user_id', $userId) を削除し、
+        // 外部結合の条件の中で特定のユーザーのログに絞り込むように変更します
+        return DB::table('subjects as s')
+            ->leftJoin('study_sessions as ss', 's.id', '=', 'ss.subject_id')
+            ->leftJoin('daily_logs as dl', function ($join) use ($userId) {
+                $join->on('dl.id', '=', 'ss.daily_log_id')
+                    ->where('dl.user_id', '=', $userId);
+            })
+            // subjectsにuser_idがないので、ここでは全科目（マスター）に対して
+            // そのユーザーの最終学習日を紐付ける形になります
+            ->groupBy('s.id', 's.name', 's.display_order')
+            ->orderBy('s.display_order')
             ->get([
-                'subjects.name as subject',
-                DB::raw('MAX(daily_logs.date) as last_date'),
+                's.name as subject',
+                DB::raw('MAX(dl.date) as lastDate'),
             ])
-            ->keyBy('subject');
-
-        $allSubjects = Subject::where('user_id', $userId)
-            ->orderBy('display_order')
-            ->pluck('name');
-
-        return $allSubjects->map(fn (string $name) => [
-            'subject' => $name,
-            'lastDate' => isset($touched[$name]) ? $touched[$name]->last_date : null,
-        ])->values()->toArray();
+            ->toArray();
     }
 
     private function dailyMinutes(int $userId, string $from, string $to): array

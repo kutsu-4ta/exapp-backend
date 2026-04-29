@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('subject_id')->constrained()->restrictOnDelete();
+            $table->foreignId('sub_category_id')->nullable()->constrained()->nullOnDelete();
             $table->string('material');
             $table->string('question_ref');
             $table->text('note')->nullable();

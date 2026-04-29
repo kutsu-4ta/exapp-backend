@@ -12,6 +12,7 @@ class StudySession extends Model
     protected $fillable = [
         'daily_log_id',
         'subject_id',
+        'sub_category_id',
         'time_slot',
         'minutes',
         'material',
@@ -21,6 +22,8 @@ class StudySession extends Model
     protected function casts(): array
     {
         return [
+            'subject_id' => 'integer',
+            'sub_category_id' => 'integer',
             'time_slot' => TimeSlot::class,
             'material' => Material::class,
             'minutes' => 'integer',
@@ -35,5 +38,10 @@ class StudySession extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function subCategory(): BelongsTo
+    {
+        return $this->belongsTo(SubCategory::class);
     }
 }

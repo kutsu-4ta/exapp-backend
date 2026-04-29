@@ -12,9 +12,9 @@ class ProblemResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'subjectId' => $this->subject_id,
             'subject' => $this->subject->name,
             'material' => $this->material->value,
+            'subCategoryId' => $this->sub_category_id,
             'questionRef' => $this->question_ref,
             'note' => $this->note,
             'proficiency' => $this->proficiency->value,

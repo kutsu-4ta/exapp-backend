@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Exapp API
   description: 中小企業診断士 学習管理アプリ API仕様書
-  version: 0.1.0
+  version: 0.2.0
 
 servers:
   - url: /api
@@ -37,6 +37,39 @@ components:
       type: string
       enum: [テキスト, 問題集, スピード問題集, 過去問, その他]
 
+    SubCategory:
+      type: object
+      required: [id, subject, name, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    SubCategoryInput:
+      type: object
+      required: [subject, name]
+      properties:
+        subject: { $ref: '#/components/schemas/Subject' }
+        name: { type: string }
+
+    MonthlySettings:
+      type: object
+      required: [year, month, targetMin, targetMax]
+      properties:
+        year: { type: integer }
+        month: { type: integer, minimum: 1, maximum: 12 }
+        targetMin: { type: number, description: '月間目標下限（時間）' }
+        targetMax: { type: number, description: '月間目標上限（時間）' }
+
+    MonthlySettingsInput:
+      type: object
+      required: [targetMin, targetMax]
+      properties:
+        targetMin: { type: number, description: '月間目標下限（時間）' }
+        targetMax: { type: number, description: '月間目標上限（時間）' }
+
     StudySession:
       type: object
       required: [id, dailyLogDate, timeSlot, minutes, subject, material]
@@ -47,6 +80,7 @@ components:
         minutes: { type: integer, minimum: 1 }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
+        subCategoryId: { type: integer, nullable: true }
         memo: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -59,6 +93,7 @@ components:
         minutes: { type: integer, minimum: 1 }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
+        subCategoryId: { type: integer, nullable: true }
         memo: { type: string, nullable: true }
 
     DailyLog:
@@ -100,6 +135,7 @@ components:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
+        subCategoryId: { type: integer, nullable: true }
         questionRef: { type: string }
         note: { type: string, nullable: true }
         proficiency: { $ref: '#/components/schemas/Proficiency' }
@@ -115,6 +151,7 @@ components:
       properties:
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
+        subCategoryId: { type: integer, nullable: true }
         questionRef: { type: string }
         note: { type: string, nullable: true }
         proficiency: { $ref: '#/components/schemas/Proficiency' }
@@ -167,6 +204,121 @@ components:
             items: { type: string }
 
 paths:
+  # ── Sub Categories ──────────────────────────────────────────────────────────
+
+  /sub-categories:
+    get:
+      summary: 小分類一覧を取得
+      tags: [Sub Categories]
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/Subject' }
+          description: 科目でフィルタ（省略時は全件）
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SubCategory' }
+        '401':
+          description: 未認証
+    post:
+      summary: 小分類を追加
+      tags: [Sub Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubCategoryInput' }
+      responses:
+        '201':
+          description: 追加成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubCategory' }
+        '401':
+          description: 未認証
+
+  /sub-categories/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      summary: 小分類を更新
+      tags: [Sub Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubCategoryInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubCategory' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+    delete:
+      summary: 小分類を削除
+      tags: [Sub Categories]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 未認証
+
+  # ── Monthly Settings ────────────────────────────────────────────────────────
+
+  /monthly-settings/{year}/{month}:
+    parameters:
+      - name: year
+        in: path
+        required: true
+        schema: { type: integer }
+      - name: month
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 12 }
+    get:
+      summary: 月間設定を取得
+      tags: [Monthly Settings]
+      description: 指定した年月の目標設定を返す。未設定の場合はデフォルト値を返す。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlySettings' }
+        '401':
+          description: 未認証
+    put:
+      summary: 月間設定を保存
+      tags: [Monthly Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MonthlySettingsInput' }
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlySettings' }
+        '401':
+          description: 未認証
+
+  # ── Daily Logs ──────────────────────────────────────────────────────────────
+
   /daily-logs:
     get:
       summary: 月間ログ一覧を取得
@@ -333,6 +485,37 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          description: 未認証
+
+  /problems/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      summary: 苦手問題を更新
+      tags: [Problems]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProblemInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          description: 未認証
+    delete:
+      summary: 苦手問題を削除
+      tags: [Problems]
+      responses:
+        '204':
+          description: 削除成功
         '401':
           description: 未認証
 

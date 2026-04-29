@@ -11,12 +11,12 @@ class EloquentStudySessionRepository implements StudySessionRepositoryInterface
     {
         $session = StudySession::create(array_merge(['daily_log_id' => $dailyLogId], $data));
 
-        return $session->load(['dailyLog', 'subject']);
+        return $session->load('dailyLog');
     }
 
     public function findByIdAndUser(int $id, int $userId): ?StudySession
     {
-        return StudySession::with(['dailyLog', 'subject'])
+        return StudySession::with('dailyLog')
             ->whereHas('dailyLog', fn ($q) => $q->where('user_id', $userId))
             ->find($id);
     }
@@ -25,7 +25,7 @@ class EloquentStudySessionRepository implements StudySessionRepositoryInterface
     {
         $session->update($data);
 
-        return $session->load(['dailyLog', 'subject']);
+        return $session->load('dailyLog');
     }
 
     public function delete(StudySession $session): void

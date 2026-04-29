@@ -13,8 +13,13 @@ class UpdateProblemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subjectId' => ['required', 'integer', Rule::exists('subjects', 'id')->where('user_id', $this->user()->id)],
+            'subject' => ['required', 'string', Rule::exists('subjects', 'name')],
             'material' => ['required', 'string', Rule::enum(Material::class)],
+            'subCategoryId' => [
+                'nullable',
+                'integer',
+                Rule::exists('sub_categories', 'id')->where('user_id', $this->user()->id),
+            ],
             'questionRef' => ['required', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:2000'],
             'proficiency' => ['required', 'string', Rule::enum(Proficiency::class)],

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\FailureType;
 use App\Enums\Material;
 use App\Enums\Proficiency;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +12,7 @@ class Problem extends Model
     protected $fillable = [
         'user_id',
         'subject_id',
+        'sub_category_id',
         'material',
         'question_ref',
         'note',
@@ -25,6 +25,8 @@ class Problem extends Model
     protected function casts(): array
     {
         return [
+            'subject_id' => 'integer',
+            'sub_category_id' => 'integer',
             'material' => Material::class,
             'proficiency' => Proficiency::class,
             'failure_types' => 'array',
@@ -41,5 +43,10 @@ class Problem extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function subCategory(): BelongsTo
+    {
+        return $this->belongsTo(SubCategory::class);
     }
 }

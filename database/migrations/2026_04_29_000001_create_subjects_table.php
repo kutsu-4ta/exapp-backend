@@ -10,13 +10,9 @@ return new class extends Migration
     {
         Schema::create('subjects', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->unsignedSmallInteger('display_order')->default(0);
             $table->timestamps();
-
-            $table->unique(['user_id', 'name']);
-            $table->index(['user_id', 'display_order']);
         });
     }
 

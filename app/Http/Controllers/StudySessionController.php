@@ -8,6 +8,7 @@ use App\Http\Resources\StudySessionResource;
 use App\UseCases\StudySession\CreateStudySessionUseCase;
 use App\UseCases\StudySession\DeleteStudySessionUseCase;
 use App\UseCases\StudySession\UpdateStudySessionUseCase;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -33,7 +34,8 @@ class StudySessionController extends Controller
             $user->id,
             $validated['dailyLogDate'],
             [
-                'subject_id' => $validated['subjectId'],
+                'subject' => $validated['subject'],
+                'sub_category_id' => $validated['subCategoryId'] ?? null,
                 'time_slot' => $validated['timeSlot'],
                 'minutes' => $validated['minutes'],
                 'material' => $validated['material'],
@@ -57,7 +59,8 @@ class StudySessionController extends Controller
             $user->id,
             $id,
             [
-                'subject_id' => $validated['subjectId'],
+                'subject' => $validated['subject'],
+                'sub_category_id' => $validated['subCategoryId'] ?? null,
                 'time_slot' => $validated['timeSlot'],
                 'minutes' => $validated['minutes'],
                 'material' => $validated['material'],
@@ -75,7 +78,6 @@ class StudySessionController extends Controller
         if (!$user) {
             throw new AuthenticationException('ユーザー認証に失敗しました。');
         }
-
 
         ($this->deleteUseCase)($user->id, $id);
 
