@@ -8,6 +8,7 @@ servers:
   - url: /api
     description: Next.js proxy (→ backend)
 
+# ルートレベルで認証を有効化（全体適用）
 security:
   - bearerAuth: []
 
@@ -22,8 +23,6 @@ components:
     TimeSlot:
       type: string
       enum: [morning, lunch, commute, night]
-      description: 早朝 / 昼 / 通勤 / 深夜
-
     Subject:
       type: string
       enum:
@@ -34,259 +33,140 @@ components:
         - 経営法務
         - 経営情報システム
         - 中小企業経営・政策
-
     Material:
       type: string
-      enum:
-        - テキスト
-        - 問題集
-        - スピード問題集
-        - 過去問
-        - その他
+      enum: [テキスト, 問題集, スピード問題集, 過去問, その他]
 
     StudySession:
       type: object
       required: [id, dailyLogDate, timeSlot, minutes, subject, material]
       properties:
-        id:
-          type: integer
-        dailyLogDate:
-          type: string
-          format: date
-          example: "2026-04-28"
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        minutes:
-          type: integer
-          minimum: 1
-          description: 学習時間（分）
-          example: 90
-        subject:
-          $ref: '#/components/schemas/Subject'
-        material:
-          $ref: '#/components/schemas/Material'
-        memo:
-          type: string
-          nullable: true
-          description: 自由記述（「完」「苦手問題のみ」など形式不問）
-          example: "完"
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+        id: { type: integer }
+        dailyLogDate: { type: string, format: date }
+        timeSlot: { $ref: '#/components/schemas/TimeSlot' }
+        minutes: { type: integer, minimum: 1 }
+        subject: { $ref: '#/components/schemas/Subject' }
+        material: { $ref: '#/components/schemas/Material' }
+        memo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     StudySessionInput:
       type: object
       required: [timeSlot, minutes, subject, material]
       properties:
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        minutes:
-          type: integer
-          minimum: 1
-          description: 学習時間（分）
-        subject:
-          $ref: '#/components/schemas/Subject'
-        material:
-          $ref: '#/components/schemas/Material'
-        memo:
-          type: string
-          nullable: true
+        timeSlot: { $ref: '#/components/schemas/TimeSlot' }
+        minutes: { type: integer, minimum: 1 }
+        subject: { $ref: '#/components/schemas/Subject' }
+        material: { $ref: '#/components/schemas/Material' }
+        memo: { type: string, nullable: true }
 
     DailyLog:
       type: object
       required: [date, isCompleted, studySessions]
       properties:
-        date:
-          type: string
-          format: date
-          example: "2026-04-28"
-        reflection:
-          type: string
-          nullable: true
-          description: 日単位の振り返り（自由記述）
-        isCompleted:
-          type: boolean
-        completedAt:
-          type: string
-          format: date-time
-          nullable: true
+        date: { type: string, format: date }
+        reflection: { type: string, nullable: true }
+        isCompleted: { type: boolean }
+        completedAt: { type: string, format: date-time, nullable: true }
         studySessions:
           type: array
-          items:
-            $ref: '#/components/schemas/StudySession'
-        totalMinutes:
-          type: integer
-          description: 合計学習時間（分）
-          readOnly: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          items: { $ref: '#/components/schemas/StudySession' }
+        totalMinutes: { type: integer, readOnly: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     DailyLogSummary:
       type: object
-      description: 一覧表示用の軽量版
       required: [date, isCompleted, totalMinutes]
       properties:
-        date:
-          type: string
-          format: date
-        isCompleted:
-          type: boolean
-        totalMinutes:
-          type: integer
-        sessionCount:
-          type: integer
+        date: { type: string, format: date }
+        isCompleted: { type: boolean }
+        totalMinutes: { type: integer }
+        sessionCount: { type: integer }
 
     Proficiency:
       type: string
       enum: ['○', '△', '×']
-      description: 習熟度（正解 / 曖昧 / 不正解）
 
     FailureType:
       type: string
       enum: ['定義漏れ', '解法ミス', '計算ミス']
-      description: ミスの種別
 
     Problem:
       type: object
       required: [id, subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt, createdAt, updatedAt]
       properties:
-        id:
-          type: integer
-        subject:
-          $ref: '#/components/schemas/Subject'
-        material:
-          $ref: '#/components/schemas/Material'
-        questionRef:
-          type: string
-          description: 問題番号・参照（例："p.123 Q4"）
-          example: "p.123 Q4"
-        note:
-          type: string
-          nullable: true
-          description: 補足メモ
-        proficiency:
-          $ref: '#/components/schemas/Proficiency'
-        failureTypes:
-          type: array
-          items:
-            $ref: '#/components/schemas/FailureType'
-        isGoodQuestion:
-          type: boolean
-          description: 良問フラグ
-        solvedAt:
-          type: string
-          format: date
-          description: 解いた日
-          example: "2026-04-28"
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+        id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
+        material: { $ref: '#/components/schemas/Material' }
+        questionRef: { type: string }
+        note: { type: string, nullable: true }
+        proficiency: { $ref: '#/components/schemas/Proficiency' }
+        failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
+        isGoodQuestion: { type: boolean }
+        solvedAt: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     ProblemInput:
       type: object
       required: [subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt]
       properties:
-        subject:
-          $ref: '#/components/schemas/Subject'
-        material:
-          $ref: '#/components/schemas/Material'
-        questionRef:
-          type: string
-        note:
-          type: string
-          nullable: true
-        proficiency:
-          $ref: '#/components/schemas/Proficiency'
-        failureTypes:
-          type: array
-          items:
-            $ref: '#/components/schemas/FailureType'
-        isGoodQuestion:
-          type: boolean
-        solvedAt:
-          type: string
-          format: date
+        subject: { $ref: '#/components/schemas/Subject' }
+        material: { $ref: '#/components/schemas/Material' }
+        questionRef: { type: string }
+        note: { type: string, nullable: true }
+        proficiency: { $ref: '#/components/schemas/Proficiency' }
+        failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
+        isGoodQuestion: { type: boolean }
+        solvedAt: { type: string, format: date }
 
     DashboardStats:
       type: object
       required: [thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, lastTouchedBySubject, dailyMinutes]
       properties:
-        thisMonthMinutes:
-          type: integer
-          description: 今月の合計学習時間（分）
-        thisMonthDays:
-          type: integer
-          description: 今月の学習日数
-        last7DaysMinutes:
-          type: integer
-          description: 直近7日間の合計学習時間（分）
-        weeklyAvgMinutes:
-          type: number
-          format: float
-          description: 週平均学習時間（分）
+        thisMonthMinutes: { type: integer }
+        thisMonthDays: { type: integer }
+        last7DaysMinutes: { type: integer }
+        weeklyAvgMinutes: { type: number, format: float }
         subjectMinutes:
           type: array
-          description: 科目別今月累計（分）、降順
           items:
             type: object
             required: [subject, minutes]
             properties:
-              subject:
-                type: string
-              minutes:
-                type: integer
+              subject: { type: string }
+              minutes: { type: integer }
         lastTouchedBySubject:
           type: array
-          description: 科目ごとの最終学習日
           items:
             type: object
             required: [subject, lastDate]
             properties:
-              subject:
-                type: string
-              lastDate:
-                type: string
-                format: date
-                nullable: true
+              subject: { type: string }
+              lastDate: { type: string, format: date, nullable: true }
         dailyMinutes:
           type: array
-          description: 直近30日間の日別学習時間（分）
           items:
             type: object
             required: [date, minutes]
             properties:
-              date:
-                type: string
-                format: date
-              minutes:
-                type: integer
+              date: { type: string, format: date }
+              minutes: { type: integer }
 
     Error:
       type: object
       required: [message]
       properties:
-        message:
-          type: string
+        message: { type: string }
         errors:
           type: object
           additionalProperties:
             type: array
-            items:
-              type: string
+            items: { type: string }
 
 paths:
-  # ── Daily Logs ─────────────────────────────────────────────────────────────
-
   /daily-logs:
     get:
       summary: 月間ログ一覧を取得
@@ -295,17 +175,11 @@ paths:
         - name: year
           in: query
           required: true
-          schema:
-            type: integer
-            example: 2026
+          schema: { type: integer }
         - name: month
           in: query
           required: true
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 12
-            example: 4
+          schema: { type: integer, minimum: 1, maximum: 12 }
       responses:
         '200':
           description: OK
@@ -313,17 +187,11 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/DailyLogSummary'
+                items: { $ref: '#/components/schemas/DailyLogSummary' }
         '401':
           description: 未認証
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
     post:
-      summary: デイリーログを作成（同日は1件のみ）
+      summary: デイリーログを作成
       tags: [Daily Logs]
       requestBody:
         required: true
@@ -333,50 +201,35 @@ paths:
               type: object
               required: [date]
               properties:
-                date:
-                  type: string
-                  format: date
+                date: { type: string, format: date }
       responses:
         '201':
           description: 作成成功
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DailyLog'
-        '409':
-          description: 同日のログがすでに存在する
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              schema: { $ref: '#/components/schemas/DailyLog' }
+        '401':
+          description: 未認証
 
   /daily-logs/{date}:
     parameters:
       - name: date
         in: path
         required: true
-        schema:
-          type: string
-          format: date
-        example: "2026-04-28"
-
+        schema: { type: string, format: date }
     get:
-      summary: 特定日のログを取得（存在しない場合は404）
+      summary: 特定日のログを取得
       tags: [Daily Logs]
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DailyLog'
+              schema: { $ref: '#/components/schemas/DailyLog' }
+        '401':
+          description: 未認証
         '404':
           description: 未作成
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
     put:
       summary: 振り返りテキストを更新
       tags: [Daily Logs]
@@ -387,56 +240,15 @@ paths:
             schema:
               type: object
               properties:
-                reflection:
-                  type: string
-                  nullable: true
+                reflection: { type: string, nullable: true }
       responses:
         '200':
           description: 更新成功
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DailyLog'
-
-  /daily-logs/{date}/complete:
-    post:
-      summary: デイリーログを完了にする
-      tags: [Daily Logs]
-      parameters:
-        - name: date
-          in: path
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: 完了成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DailyLog'
-
-  /daily-logs/{date}/uncomplete:
-    post:
-      summary: 完了を取り消して再編集可能にする
-      tags: [Daily Logs]
-      parameters:
-        - name: date
-          in: path
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: 取消成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DailyLog'
-
-  # ── Study Sessions ──────────────────────────────────────────────────────────
+              schema: { $ref: '#/components/schemas/DailyLog' }
+        '401':
+          description: 未認証
 
   /study-sessions:
     post:
@@ -452,25 +264,22 @@ paths:
                 - type: object
                   required: [dailyLogDate]
                   properties:
-                    dailyLogDate:
-                      type: string
-                      format: date
+                    dailyLogDate: { type: string, format: date }
       responses:
         '201':
           description: 追加成功
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/StudySession'
+              schema: { $ref: '#/components/schemas/StudySession' }
+        '401':
+          description: 未認証
 
   /study-sessions/{id}:
     parameters:
       - name: id
         in: path
         required: true
-        schema:
-          type: integer
-
+        schema: { type: integer }
     put:
       summary: 学習ブロックを更新
       tags: [Study Sessions]
@@ -478,36 +287,23 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/StudySessionInput'
+            schema: { $ref: '#/components/schemas/StudySessionInput' }
       responses:
         '200':
           description: 更新成功
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/StudySession'
-        '404':
-          description: 見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+              schema: { $ref: '#/components/schemas/StudySession' }
+        '401':
+          description: 未認証
     delete:
       summary: 学習ブロックを削除
       tags: [Study Sessions]
       responses:
         '204':
           description: 削除成功
-        '404':
-          description: 見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  # ── Problems ───────────────────────────────────────────────────────────────
+        '401':
+          description: 未認証
 
   /problems:
     get:
@@ -520,15 +316,9 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Problem'
+                items: { $ref: '#/components/schemas/Problem' }
         '401':
           description: 未認証
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
     post:
       summary: 苦手問題を追加
       tags: [Problems]
@@ -536,67 +326,15 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemInput'
+            schema: { $ref: '#/components/schemas/ProblemInput' }
       responses:
         '201':
           description: 追加成功
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /problems/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-
-    put:
-      summary: 苦手問題を更新
-      tags: [Problems]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemInput'
-      responses:
-        '200':
-          description: 更新成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '404':
-          description: 見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      summary: 苦手問題を削除
-      tags: [Problems]
-      responses:
-        '204':
-          description: 削除成功
-        '404':
-          description: 見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  # ── Dashboard ───────────────────────────────────────────────────────────────
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          description: 未認証
 
   /dashboard/stats:
     get:
@@ -607,22 +345,17 @@ paths:
           description: OK
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DashboardStats'
+              schema: { $ref: '#/components/schemas/DashboardStats' }
         '401':
           description: 未認証
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
-  # ── Auth (existing) ─────────────────────────────────────────────────────────
+  # ── Auth (No Security) ──────────────────────────────────────────────────────
 
   /auth/login:
     post:
       summary: ログイン
       tags: [Auth]
-      security: []
+      security: [] # 認証除外
       requestBody:
         required: true
         content:
@@ -631,11 +364,8 @@ paths:
               type: object
               required: [email, password]
               properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
+                email: { type: string, format: email }
+                password: { type: string }
       responses:
         '200':
           description: 成功
@@ -644,23 +374,19 @@ paths:
               schema:
                 type: object
                 properties:
-                  token:
-                    type: string
+                  token: { type: string }
                   user:
                     type: object
                     properties:
-                      id:
-                        type: integer
-                      name:
-                        type: string
-                      email:
-                        type: string
+                      id: { type: integer }
+                      name: { type: string }
+                      email: { type: string }
 
   /auth/register:
     post:
       summary: 新規登録
       tags: [Auth]
-      security: []
+      security: [] # 認証除外
       requestBody:
         required: true
         content:
@@ -669,15 +395,10 @@ paths:
               type: object
               required: [name, email, password, password_confirmation]
               properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                password_confirmation:
-                  type: string
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                password_confirmation: { type: string }
       responses:
         '201':
           description: 登録成功
@@ -686,14 +407,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  token:
-                    type: string
+                  token: { type: string }
                   user:
                     type: object
                     properties:
-                      id:
-                        type: integer
-                      name:
-                        type: string
-                      email:
-                        type: string
+                      id: { type: integer }
+                      name: { type: string }
+                      email: { type: string }
