@@ -15,11 +15,6 @@ class Authenticate
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // 未認証時
-        if (!auth()->check()) {
-            abort(401);
-        }
-
         return $next($request);
     }
 }
