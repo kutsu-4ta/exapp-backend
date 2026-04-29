@@ -14,26 +14,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
     networks:
       - exapp-network
     restart: unless-stopped
 
   db:
-    image: mysql:8.0
+    image: postgres:17-alpine
     container_name: exapp-db
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${DB_DATABASE:-exapp}
-      MYSQL_USER: ${DB_USERNAME:-exapp}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_DATABASE:-exapp}
+      POSTGRES_USER: ${DB_USERNAME:-exapp}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
-      - db-data:/var/lib/mysql
+      - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-exapp} -d ${DB_DATABASE:-exapp}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -41,26 +38,10 @@ services:
     networks:
       - exapp-network
     restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    container_name: exapp-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - exapp-network
-    restart: unless-stopped
+#    restart: on-failure:5
 
 volumes:
   db-data:
-  redis-data:
 
 networks:
   exapp-network:
