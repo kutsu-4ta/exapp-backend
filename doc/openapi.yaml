@@ -349,6 +349,33 @@ paths:
         '401':
           description: 未認証
 
+  /auth/logout:
+    post:
+      summary: ログアウト
+      tags: [Auth]
+      description: |
+        現在使用中のアクセストークンを削除し、セッションを終了します。
+        内部的には Laravel Sanctum の `currentAccessToken()->delete()` を実行します。
+      security:
+        - bearerAuth: [] # この操作には有効なトークンが必須
+      responses:
+        '200':
+          description: ログアウト成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: ログアウトしました。
+        '401':
+          description: 未認証、またはトークンが無効
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   # ── Auth (No Security) ──────────────────────────────────────────────────────
 
   /auth/login:
