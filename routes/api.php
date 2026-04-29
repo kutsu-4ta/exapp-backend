@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 // 認証（公開）
-Route::post('auth/register', [AuthController::class, 'register']);
-Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/google', [AuthController::class, 'googleLogin']);
+Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
 // 認証必須
 Route::middleware('auth:sanctum')->group(function () {
