@@ -72,7 +72,13 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $user->currentAccessToken()->delete();
 
         return response()->json(['message' => 'ログアウトしました。']);
     }

@@ -24,7 +24,14 @@ class SubjectController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $subjects = ($this->listUseCase)($request->user()->id);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+
+        $subjects = ($this->listUseCase)($user->id);
 
         return response()->json(SubjectResource::collection($subjects));
     }
@@ -43,9 +50,15 @@ class SubjectController extends Controller
 
     public function update(UpdateSubjectRequest $request, int $id): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $validated = $request->validated();
         $subject = ($this->updateUseCase)(
-            $request->user()->id,
+            $user->id,
             $id,
             $validated['name'],
             $validated['displayOrder'] ?? 0,
@@ -56,7 +69,13 @@ class SubjectController extends Controller
 
     public function destroy(Request $request, int $id): Response
     {
-        ($this->deleteUseCase)($request->user()->id, $id);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        ($this->deleteUseCase)($user->id, $id);
 
         return response()->noContent();
     }

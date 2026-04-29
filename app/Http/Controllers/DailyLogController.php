@@ -29,8 +29,14 @@ class DailyLogController extends Controller
 
     public function index(ListDailyLogsRequest $request): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $logs = ($this->listUseCase)(
-            $request->user()->id,
+            $user->id,
             (int) $request->validated('year'),
             (int) $request->validated('month'),
         );
@@ -40,14 +46,26 @@ class DailyLogController extends Controller
 
     public function store(CreateDailyLogRequest $request): JsonResponse
     {
-        $log = ($this->createUseCase)($request->user()->id, $request->validated('date'));
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $log = ($this->createUseCase)($user->id, $request->validated('date'));
 
         return response()->json(new DailyLogResource($log), 201);
     }
 
     public function show(Request $request, string $date): JsonResponse
     {
-        $log = ($this->getUseCase)($request->user()->id, $date);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $log = ($this->getUseCase)($user->id, $date);
 
         if ($log === null) {
             abort(404);
@@ -58,8 +76,14 @@ class DailyLogController extends Controller
 
     public function update(UpdateReflectionRequest $request, string $date): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $log = ($this->updateReflectionUseCase)(
-            $request->user()->id,
+            $user->id,
             $date,
             $request->validated('reflection'),
         );
@@ -69,14 +93,26 @@ class DailyLogController extends Controller
 
     public function complete(Request $request, string $date): JsonResponse
     {
-        $log = ($this->completeUseCase)($request->user()->id, $date);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $log = ($this->completeUseCase)($user->id, $date);
 
         return response()->json(new DailyLogResource($log));
     }
 
     public function uncomplete(Request $request, string $date): JsonResponse
     {
-        $log = ($this->uncompleteUseCase)($request->user()->id, $date);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $log = ($this->uncompleteUseCase)($user->id, $date);
 
         return response()->json(new DailyLogResource($log));
     }

@@ -22,9 +22,15 @@ class StudySessionController extends Controller
 
     public function store(CreateStudySessionRequest $request): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $validated = $request->validated();
         $session = ($this->createUseCase)(
-            $request->user()->id,
+            $user->id,
             $validated['dailyLogDate'],
             [
                 'subject_id' => $validated['subjectId'],
@@ -40,9 +46,15 @@ class StudySessionController extends Controller
 
     public function update(UpdateStudySessionRequest $request, int $id): JsonResponse
     {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $validated = $request->validated();
         $session = ($this->updateUseCase)(
-            $request->user()->id,
+            $user->id,
             $id,
             [
                 'subject_id' => $validated['subjectId'],
@@ -58,7 +70,14 @@ class StudySessionController extends Controller
 
     public function destroy(Request $request, int $id): Response
     {
-        ($this->deleteUseCase)($request->user()->id, $id);
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+
+        ($this->deleteUseCase)($user->id, $id);
 
         return response()->noContent();
     }

@@ -9,6 +9,7 @@ use App\UseCases\Problem\CreateProblemUseCase;
 use App\UseCases\Problem\DeleteProblemUseCase;
 use App\UseCases\Problem\ListProblemsUseCase;
 use App\UseCases\Problem\UpdateProblemUseCase;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,7 +25,14 @@ class ProblemController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $problems = ($this->listUseCase)($request->user()->id);
+        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $problems = ($this->listUseCase)($user->id);
 
         return response()->json(ProblemResource::collection($problems));
     }
@@ -51,9 +59,16 @@ class ProblemController extends Controller
 
     public function update(UpdateProblemRequest $request, int $id): JsonResponse
     {
+        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
         $validated = $request->validated();
         $problem = ($this->updateUseCase)(
-            $request->user()->id,
+            $user->id,
             $id,
             [
                 'subject_id' => $validated['subjectId'],
@@ -72,7 +87,14 @@ class ProblemController extends Controller
 
     public function destroy(Request $request, int $id): Response
     {
-        ($this->deleteUseCase)($request->user()->id, $id);
+        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        ($this->deleteUseCase)($user->id, $id);
 
         return response()->noContent();
     }
