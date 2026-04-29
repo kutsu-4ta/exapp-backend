@@ -7,7 +7,7 @@ return [
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
     |
-    | ローカル開発: http://localhost:5173 (Vite dev server) を許可。
+    | ローカル開発:
     | 本番環境では CORS_ALLOWED_ORIGINS 環境変数で制御する。
     |
     */

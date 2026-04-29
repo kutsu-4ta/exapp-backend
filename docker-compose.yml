@@ -38,6 +38,7 @@ services:
     networks:
       - exapp-network
     restart: unless-stopped
+#    restart: on-failure:5
 
 volumes:
   db-data:

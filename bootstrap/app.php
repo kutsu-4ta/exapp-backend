@@ -1,9 +1,11 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -15,8 +17,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+        // 認証
+        $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+
+        // 未認証リクエスト
+        $exceptions->renderable(function (AuthenticationException $e, Request $request): JsonResponse {
+            return response()->json([
+                'message' => 'Unauthenticated',
+            ], 401);
+        });
+
         $exceptions->renderable(function (ValidationException $e): JsonResponse {
             return response()->json([
                 'message' => $e->getMessage(),
