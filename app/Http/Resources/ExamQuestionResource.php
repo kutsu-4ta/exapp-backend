@@ -22,6 +22,7 @@ class ExamQuestionResource extends JsonResource
             'isDoubtful' => $this->is_doubtful,
             'point' => $this->point,
             'note' => $this->note,
+            'answeredTimeMs' => $this->answered_time_ms,
         ];
     }
 }
