@@ -3,12 +3,14 @@
 namespace App\Providers;
 
 use App\Domain\DailyLog\DailyLogRepositoryInterface;
+use App\Domain\ExamSession\ExamSessionRepositoryInterface;
 use App\Domain\MonthlySetting\MonthlySettingRepositoryInterface;
 use App\Domain\Problem\ProblemRepositoryInterface;
 use App\Domain\StudySession\StudySessionRepositoryInterface;
 use App\Domain\SubCategory\SubCategoryRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentDailyLogRepository;
+use App\Infrastructure\Repositories\EloquentExamSessionRepository;
 use App\Infrastructure\Repositories\EloquentMonthlySettingRepository;
 use App\Infrastructure\Repositories\EloquentProblemRepository;
 use App\Infrastructure\Repositories\EloquentStudySessionRepository;
@@ -26,5 +28,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(DailyLogRepositoryInterface::class, EloquentDailyLogRepository::class);
         $this->app->bind(StudySessionRepositoryInterface::class, EloquentStudySessionRepository::class);
         $this->app->bind(ProblemRepositoryInterface::class, EloquentProblemRepository::class);
+        $this->app->bind(ExamSessionRepositoryInterface::class, EloquentExamSessionRepository::class);
     }
 }

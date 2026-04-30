@@ -126,7 +126,7 @@ components:
 
     FailureType:
       type: string
-      enum: ['定義漏れ', '解法ミス', '計算ミス']
+      enum: ['定義ミス', '解法ミス', '計算ミス']
 
     Problem:
       type: object
@@ -246,6 +246,7 @@ components:
         isDoubtful: { type: boolean }
         point: { type: integer }
         note: { type: string, nullable: true }
+        answeredTimeMs: { type: integer, nullable: true, description: '解答時のストップウォッチ経過時間（ms）' }
 
     ExamSession:
       type: object
@@ -513,6 +514,46 @@ paths:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
           description: 未認証
+
+  /daily-logs/{date}/complete:
+    parameters:
+      - name: date
+        in: path
+        required: true
+        schema: { type: string, format: date }
+    post:
+      summary: デイリーログを完了にする
+      tags: [Daily Logs]
+      responses:
+        '200':
+          description: 完了成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DailyLog' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+
+  /daily-logs/{date}/uncomplete:
+    parameters:
+      - name: date
+        in: path
+        required: true
+        schema: { type: string, format: date }
+    post:
+      summary: デイリーログの完了を取り消す
+      tags: [Daily Logs]
+      responses:
+        '200':
+          description: 取り消し成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DailyLog' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
 
   /study-sessions:
     post:
@@ -810,6 +851,43 @@ paths:
               schema: { $ref: '#/components/schemas/ExamSubjectStats' }
         '401':
           description: 未認証
+
+  /auth/google:
+    post:
+      summary: Googleログイン（Firebase ID Token検証）
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_token]
+              properties:
+                id_token: { type: string, description: 'Firebase ID Token' }
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, user]
+                properties:
+                  token: { type: string, description: 'アクセストークン（Bearer）' }
+                  user:
+                    type: object
+                    required: [id, name, email]
+                    properties:
+                      id: { type: integer }
+                      name: { type: string }
+                      email: { type: string, format: email }
+        '401':
+          description: IDトークンが無効
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /auth/logout:
     post:

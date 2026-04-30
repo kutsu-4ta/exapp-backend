@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExamSessionController;
 use App\Http\Controllers\MonthlySettingController;
 use App\Http\Controllers\ProblemController;
 use App\Http\Controllers\StudySessionController;
@@ -51,6 +52,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ダッシュボード
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+
+    // 試験セッション
+    Route::get('exam-sessions', [ExamSessionController::class, 'index']);
+    Route::post('exam-sessions', [ExamSessionController::class, 'store']);
+    Route::get('exam-sessions/{id}', [ExamSessionController::class, 'show']);
+    Route::put('exam-sessions/{id}', [ExamSessionController::class, 'update']);
+    Route::delete('exam-sessions/{id}', [ExamSessionController::class, 'destroy']);
+    Route::post('exam-sessions/{id}/complete', [ExamSessionController::class, 'complete']);
+
+    // 科目別試験分析
+    Route::get('exam-subjects/{subject}/stats', [ExamSessionController::class, 'subjectStats']);
 });
 
 // ヘルスチェック
