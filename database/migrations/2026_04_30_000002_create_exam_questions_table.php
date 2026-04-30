@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('is_doubtful')->default(false);
             $table->integer('point')->default(0);
             $table->text('note')->nullable();
+            $table->bigInteger('answered_time_ms')->nullable();
             $table->timestamps();
 
             $table->index(['exam_session_id', 'sort_order']);

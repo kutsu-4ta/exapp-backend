@@ -36,6 +36,7 @@ class CompleteExamSessionUseCase
             'is_doubtful' => $q['isDoubtful'],
             'point' => $q['point'],
             'note' => $q['note'] ?? null,
+            'answered_time_ms' => $q['answeredTimeMs'] ?? null,
         ], $questions);
 
         return $this->repository->complete($session, $rows);

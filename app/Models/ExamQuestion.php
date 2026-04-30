@@ -20,6 +20,7 @@ class ExamQuestion extends Model
         'is_doubtful',
         'point',
         'note',
+        'answered_time_ms',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class ExamQuestion extends Model
             'is_correct' => 'boolean',
             'is_doubtful' => 'boolean',
             'point' => 'integer',
+            'answered_time_ms' => 'integer',
         ];
     }
 
