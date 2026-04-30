@@ -12,12 +12,15 @@ class CreateExamSessionUseCase
         private readonly ExamSessionRepositoryInterface $repository,
     ) {}
 
-    public function __invoke(int $userId, string $subjectName, string $examYear): ExamSession
+    public function __invoke(int $userId, ?string $subjectName, string $examYear): ExamSession
     {
-        $subject = Subject::where('name', $subjectName)->firstOrFail();
+        $subjectId = null;
+        if ($subjectName !== null) {
+            $subjectId = Subject::firstOrCreate(['name' => $subjectName])->id;
+        }
 
         return $this->repository->create($userId, [
-            'subject_id' => $subject->id,
+            'subject_id' => $subjectId,
             'exam_year' => $examYear,
         ]);
     }

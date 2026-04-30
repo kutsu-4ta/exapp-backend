@@ -11,7 +11,7 @@ class UpdateExamSessionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['sometimes', 'string', Rule::exists('subjects', 'name')],
+            'subject' => ['sometimes', 'nullable', 'string'],
             'examYear' => ['sometimes', 'string', 'max:10'],
             'status' => ['sometimes', 'string', Rule::enum(ExamSessionStatus::class)],
         ];

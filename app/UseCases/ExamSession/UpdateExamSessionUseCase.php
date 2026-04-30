@@ -22,9 +22,10 @@ class UpdateExamSessionUseCase
 
         $updateData = [];
 
-        if (isset($data['subject'])) {
-            $subject = Subject::where('name', $data['subject'])->firstOrFail();
-            $updateData['subject_id'] = $subject->id;
+        if (array_key_exists('subject', $data)) {
+            $updateData['subject_id'] = $data['subject'] !== null
+                ? Subject::firstOrCreate(['name' => $data['subject']])->id
+                : null;
         }
 
         if (isset($data['exam_year'])) {

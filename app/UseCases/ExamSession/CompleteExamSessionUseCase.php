@@ -12,7 +12,7 @@ class CompleteExamSessionUseCase
         private readonly ExamSessionRepositoryInterface $repository,
     ) {}
 
-    public function __invoke(int $id, int $userId, string $subjectName, string $examYear, array $questions): ExamSession
+    public function __invoke(int $id, int $userId, ?string $subjectName, string $examYear, array $questions): ExamSession
     {
         $session = $this->repository->findByIdAndUser($id, $userId);
 
@@ -20,9 +20,9 @@ class CompleteExamSessionUseCase
             abort(404);
         }
 
-        $subject = Subject::where('name', $subjectName)->firstOrFail();
-
-        $session->subject_id = $subject->id;
+        $session->subject_id = $subjectName !== null
+            ? Subject::firstOrCreate(['name' => $subjectName])->id
+            : null;
         $session->exam_year = $examYear;
 
         $rows = array_map(fn (array $q) => [

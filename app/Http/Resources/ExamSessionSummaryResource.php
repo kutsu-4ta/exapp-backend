@@ -11,7 +11,7 @@ class ExamSessionSummaryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'subject' => $this->subject->name,
+            'subject' => $this->subject?->name,
             'examYear' => $this->exam_year,
             'totalScore' => $this->totalScore(),
             'pureScore' => $this->pureScore(),

@@ -11,7 +11,7 @@ class CompleteExamSessionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string', Rule::exists('subjects', 'name')],
+            'subject' => ['nullable', 'string'],
             'examYear' => ['required', 'string', 'max:10'],
             'questions' => ['required', 'array', 'min:1'],
             'questions.*.sortOrder' => ['required', 'integer', 'min:0'],

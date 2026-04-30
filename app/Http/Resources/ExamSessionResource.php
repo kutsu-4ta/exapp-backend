@@ -11,7 +11,7 @@ class ExamSessionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'subject' => $this->subject->name,
+            'subject' => $this->subject?->name,
             'examYear' => $this->exam_year,
             'status' => $this->status->value,
             'questions' => ExamQuestionResource::collection($this->questions),
