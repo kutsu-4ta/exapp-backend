@@ -1,13 +1,20 @@
 #!/bin/sh
+set -e
 
 echo "Waiting for DB..."
+until pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME}" -d "${DB_DATABASE}" -q; do
+  sleep 2
+done
+echo "DB is ready."
 
-sleep 5
+# APP_KEY が未設定の場合は生成（Render ダッシュボードで設定することを推奨）
+if [ -z "$APP_KEY" ]; then
+  echo "WARNING: APP_KEY is not set. Generating a temporary key..."
+  export APP_KEY=$(php artisan key:generate --show --no-interaction)
+fi
 
-# DB
 php artisan migrate --force
 
-# 環境ごとに分ける
 if [ "$APP_ENV" = "production" ]; then
   echo "Running in production mode"
 
@@ -15,14 +22,11 @@ if [ "$APP_ENV" = "production" ]; then
   php artisan route:cache
   php artisan view:cache
 
-  # 本番（※後でFPMに置き換える前提）
   php -S 0.0.0.0:8000 -t public
-
 else
   echo "Running in local mode"
 
   php artisan config:clear
 
-  # 開発
   php artisan serve --host=0.0.0.0 --port=8000
 fi

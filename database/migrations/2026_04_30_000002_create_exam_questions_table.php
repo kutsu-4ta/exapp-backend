@@ -16,7 +16,7 @@ return new class extends Migration
             $table->boolean('is_sub')->default(false);
             $table->boolean('has_children')->default(false);
             $table->string('rank', 1);
-            $table->string('my_answer');
+            $table->string('my_answer')->nullable();
             $table->boolean('is_correct')->nullable();
             $table->boolean('is_doubtful')->default(false);
             $table->integer('point')->default(0);

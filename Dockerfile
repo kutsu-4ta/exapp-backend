@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
+    postgresql-client \
     zip \
     unzip \
     && apt-get clean \
@@ -32,8 +33,8 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Install PHP dependencies (skip dev in production, include in dev)
-RUN composer install --no-interaction --prefer-dist
+# Install PHP dependencies (production: no dev deps)
+RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache

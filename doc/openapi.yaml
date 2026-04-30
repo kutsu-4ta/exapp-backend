@@ -217,7 +217,7 @@ components:
 
     ExamQuestion:
       type: object
-      required: [id, examSessionId, sortOrder, displayId, isSub, hasChildren, rank, myAnswer, isDoubtful, point]
+      required: [id, examSessionId, sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point]
       properties:
         id: { type: integer }
         examSessionId: { type: integer }
@@ -226,7 +226,7 @@ components:
         isSub: { type: boolean, description: '設問（小問）かどうか' }
         hasChildren: { type: boolean, description: '小問を持つ親問かどうか' }
         rank: { $ref: '#/components/schemas/Rank' }
-        myAnswer: { type: string, description: 'ア〜オ または記述解答' }
+        myAnswer: { type: string, nullable: true, description: 'ア〜オ または記述解答（未回答時はnull）' }
         answeredTimeMs: { type: integer, nullable: true, description: '解答にかかった時間（ミリ秒）' }
         isCorrect: { type: boolean, nullable: true, description: '正誤（null=未採点）' }
         isDoubtful: { type: boolean, description: '要復習フラグ' }
@@ -235,14 +235,14 @@ components:
 
     ExamQuestionInput:
       type: object
-      required: [sortOrder, displayId, isSub, hasChildren, rank, myAnswer, isDoubtful, point]
+      required: [sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point]
       properties:
         sortOrder: { type: integer }
         displayId: { type: string }
         isSub: { type: boolean }
         hasChildren: { type: boolean }
         rank: { $ref: '#/components/schemas/Rank' }
-        myAnswer: { type: string }
+        myAnswer: { type: string, nullable: true }
         isCorrect: { type: boolean, nullable: true }
         isDoubtful: { type: boolean }
         point: { type: integer }
