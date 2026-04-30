@@ -203,6 +203,118 @@ components:
             type: array
             items: { type: string }
 
+    # ── Exam ────────────────────────────────────────────────────────────────────
+
+    Rank:
+      type: string
+      enum: [A, B, C, D, E]
+      description: 問題の重要度ランク（A=最重要〜E=低優先）
+
+    ExamSessionStatus:
+      type: string
+      enum: [in_progress, scoring, completed]
+      description: 'in_progress: 解答中, scoring: 自己採点中, completed: 完了'
+
+    ExamQuestion:
+      type: object
+      required: [id, examSessionId, sortOrder, displayId, isSub, hasChildren, rank, myAnswer, isDoubtful, point]
+      properties:
+        id: { type: integer }
+        examSessionId: { type: integer }
+        sortOrder: { type: integer, description: '表示順（0始まり）' }
+        displayId: { type: string, description: '第1問・設問1 など表示用ID' }
+        isSub: { type: boolean, description: '設問（小問）かどうか' }
+        hasChildren: { type: boolean, description: '小問を持つ親問かどうか' }
+        rank: { $ref: '#/components/schemas/Rank' }
+        myAnswer: { type: string, description: 'ア〜オ または記述解答' }
+        isCorrect: { type: boolean, nullable: true, description: '正誤（null=未採点）' }
+        isDoubtful: { type: boolean, description: '要復習フラグ' }
+        point: { type: integer, description: '配点' }
+        note: { type: string, nullable: true, description: 'ミスメモ' }
+
+    ExamQuestionInput:
+      type: object
+      required: [sortOrder, displayId, isSub, hasChildren, rank, myAnswer, isDoubtful, point]
+      properties:
+        sortOrder: { type: integer }
+        displayId: { type: string }
+        isSub: { type: boolean }
+        hasChildren: { type: boolean }
+        rank: { $ref: '#/components/schemas/Rank' }
+        myAnswer: { type: string }
+        isCorrect: { type: boolean, nullable: true }
+        isDoubtful: { type: boolean }
+        point: { type: integer }
+        note: { type: string, nullable: true }
+
+    ExamSession:
+      type: object
+      required: [id, subject, examYear, status, questions, totalScore, pureScore, correctCount, incorrectCount, doubtfulCount, createdAt]
+      properties:
+        id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
+        examYear: { type: string, example: 'R07', description: '受験年度（R07 等）' }
+        status: { $ref: '#/components/schemas/ExamSessionStatus' }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/ExamQuestion' }
+        totalScore: { type: integer, readOnly: true, description: '採点後の合計得点' }
+        pureScore: { type: integer, readOnly: true, description: '要復習を除いた純粋な得点' }
+        correctCount: { type: integer, readOnly: true }
+        incorrectCount: { type: integer, readOnly: true }
+        doubtfulCount: { type: integer, readOnly: true }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+
+    ExamSessionSummary:
+      type: object
+      required: [id, subject, examYear, totalScore, pureScore, createdAt]
+      properties:
+        id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
+        examYear: { type: string }
+        totalScore: { type: integer }
+        pureScore: { type: integer }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+
+    ExamMistakeNote:
+      type: object
+      required: [questionId, sessionId, examYear, displayId, rank, note, isDoubtful, completedAt]
+      properties:
+        questionId: { type: integer }
+        sessionId: { type: integer }
+        examYear: { type: string }
+        displayId: { type: string }
+        rank: { $ref: '#/components/schemas/Rank' }
+        note: { type: string }
+        isDoubtful: { type: boolean }
+        completedAt: { type: string, format: date-time }
+
+    ExamRankStat:
+      type: object
+      required: [rank, correctRate, count]
+      properties:
+        rank: { $ref: '#/components/schemas/Rank' }
+        correctRate: { type: number, format: float, minimum: 0, maximum: 1 }
+        count: { type: integer, description: '該当ランクの問題数' }
+
+    ExamSubjectStats:
+      type: object
+      required: [subject, sessionCount, avgTotalScore, avgPureScore, rankStats, recentMistakes]
+      properties:
+        subject: { $ref: '#/components/schemas/Subject' }
+        sessionCount: { type: integer }
+        avgTotalScore: { type: number, format: float }
+        avgPureScore: { type: number, format: float }
+        rankStats:
+          type: array
+          items: { $ref: '#/components/schemas/ExamRankStat' }
+        recentMistakes:
+          type: array
+          items: { $ref: '#/components/schemas/ExamMistakeNote' }
+          description: '直近10件のミスメモ（note が入力されているもの）'
+
 paths:
   # ── Sub Categories ──────────────────────────────────────────────────────────
 
@@ -529,6 +641,173 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DashboardStats' }
+        '401':
+          description: 未認証
+
+  # ── Exam Sessions ───────────────────────────────────────────────────────────
+
+  /exam-sessions:
+    get:
+      summary: 試験セッション一覧を取得
+      tags: [Exam]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ExamSessionStatus' }
+          description: ステータスでフィルタ（省略時は全件）
+        - name: subject
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/Subject' }
+          description: 科目でフィルタ
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ExamSessionSummary' }
+        '401':
+          description: 未認証
+    post:
+      summary: 試験セッションを作成
+      tags: [Exam]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, examYear]
+              properties:
+                subject: { $ref: '#/components/schemas/Subject' }
+                examYear: { type: string, example: 'R07' }
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '401':
+          description: 未認証
+
+  /exam-sessions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: 試験セッション詳細を取得
+      tags: [Exam]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+    put:
+      summary: 試験セッションのメタデータを更新
+      tags: [Exam]
+      description: subject・examYear の編集に使用。status の直接変更も可能（scoring への変更など）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { $ref: '#/components/schemas/Subject' }
+                examYear: { type: string }
+                status: { $ref: '#/components/schemas/ExamSessionStatus' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+    delete:
+      summary: 試験セッションを削除
+      tags: [Exam]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+
+  /exam-sessions/{id}/complete:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      summary: 試験を完了として保存
+      tags: [Exam]
+      description: |
+        解答・採点データを一括登録し、ステータスを completed に変更する。
+        既存の questions は全て置き換えられる。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, examYear, questions]
+              properties:
+                subject: { $ref: '#/components/schemas/Subject' }
+                examYear: { type: string }
+                questions:
+                  type: array
+                  items: { $ref: '#/components/schemas/ExamQuestionInput' }
+      responses:
+        '200':
+          description: 保存・完了成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '401':
+          description: 未認証
+        '404':
+          description: 見つからない
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Exam Subject Stats ───────────────────────────────────────────────────────
+
+  /exam-subjects/{subject}/stats:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Subject' }
+        description: URLエンコードされた科目名
+    get:
+      summary: 科目別の分析データを取得
+      tags: [Exam]
+      description: |
+        指定科目のランク別正答率と直近のミスメモ（note があるもの）を返す。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSubjectStats' }
         '401':
           description: 未認証
 
