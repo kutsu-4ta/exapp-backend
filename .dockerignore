@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+node_modules
+storage/logs/*.log
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+docker-compose.yml
+*.md

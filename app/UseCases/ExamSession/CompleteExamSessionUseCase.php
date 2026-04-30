@@ -31,7 +31,7 @@ class CompleteExamSessionUseCase
             'is_sub' => $q['isSub'],
             'has_children' => $q['hasChildren'],
             'rank' => $q['rank'],
-            'my_answer' => $q['myAnswer'],
+            'my_answer' => $q['myAnswer'] ?? null,
             'is_correct' => $q['isCorrect'] ?? null,
             'is_doubtful' => $q['isDoubtful'],
             'point' => $q['point'],

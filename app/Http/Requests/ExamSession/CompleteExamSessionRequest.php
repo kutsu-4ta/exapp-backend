@@ -19,7 +19,7 @@ class CompleteExamSessionRequest extends FormRequest
             'questions.*.isSub' => ['required', 'boolean'],
             'questions.*.hasChildren' => ['required', 'boolean'],
             'questions.*.rank' => ['required', 'string', Rule::enum(Rank::class)],
-            'questions.*.myAnswer' => ['required', 'string', 'max:255'],
+            'questions.*.myAnswer' => ['nullable', 'string', 'max:255'],
             'questions.*.isCorrect' => ['nullable', 'boolean'],
             'questions.*.isDoubtful' => ['required', 'boolean'],
             'questions.*.point' => ['required', 'integer', 'min:0'],
