@@ -2,8 +2,15 @@
 set -e
 
 echo "Waiting for DB..."
+MAX_WAIT=60
+WAITED=0
 until pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME}" -d "${DB_DATABASE}" -q; do
+  if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+    echo "ERROR: DB not ready after ${MAX_WAIT} seconds. Check DB env vars."
+    exit 1
+  fi
   sleep 2
+  WAITED=$((WAITED + 2))
 done
 echo "DB is ready."
 
