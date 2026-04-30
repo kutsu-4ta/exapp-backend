@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libpq-dev \
     zip \
     unzip \
     && apt-get clean \
@@ -15,16 +16,13 @@ RUN apt-get update && apt-get install -y \
 
 # PHP extensions
 RUN docker-php-ext-install \
-    pdo_mysql \
+    pdo_pgsql \
     mbstring \
     exif \
     pcntl \
     bcmath \
     gd \
     zip
-
-# Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -42,4 +40,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
