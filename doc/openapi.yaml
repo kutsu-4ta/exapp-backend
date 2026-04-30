@@ -227,6 +227,7 @@ components:
         hasChildren: { type: boolean, description: '小問を持つ親問かどうか' }
         rank: { $ref: '#/components/schemas/Rank' }
         myAnswer: { type: string, description: 'ア〜オ または記述解答' }
+        answeredTimeMs: { type: integer, nullable: true, description: '解答にかかった時間（ミリ秒）' }
         isCorrect: { type: boolean, nullable: true, description: '正誤（null=未採点）' }
         isDoubtful: { type: boolean, description: '要復習フラグ' }
         point: { type: integer, description: '配点' }
