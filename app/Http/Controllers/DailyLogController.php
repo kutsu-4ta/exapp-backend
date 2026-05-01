@@ -9,12 +9,14 @@ use App\Http\Resources\DailyLogResource;
 use App\Http\Resources\DailyLogSummaryResource;
 use App\UseCases\DailyLog\CompleteDailyLogUseCase;
 use App\UseCases\DailyLog\CreateDailyLogUseCase;
+use App\UseCases\DailyLog\DeleteDailyLogUseCase;
 use App\UseCases\DailyLog\GetDailyLogUseCase;
 use App\UseCases\DailyLog\ListDailyLogsUseCase;
 use App\UseCases\DailyLog\UncompleteDailyLogUseCase;
 use App\UseCases\DailyLog\UpdateReflectionUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class DailyLogController extends Controller
 {
@@ -23,6 +25,7 @@ class DailyLogController extends Controller
         private readonly CreateDailyLogUseCase $createUseCase,
         private readonly GetDailyLogUseCase $getUseCase,
         private readonly UpdateReflectionUseCase $updateReflectionUseCase,
+        private readonly DeleteDailyLogUseCase $deleteUseCase,
         private readonly CompleteDailyLogUseCase $completeUseCase,
         private readonly UncompleteDailyLogUseCase $uncompleteUseCase,
     ) {}
@@ -89,6 +92,19 @@ class DailyLogController extends Controller
         );
 
         return response()->json(new DailyLogResource($log));
+    }
+
+    public function destroy(Request $request, string $date): Response
+    {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            abort(401);
+        }
+
+        ($this->deleteUseCase)($user->id, $date);
+
+        return response()->noContent();
     }
 
     public function complete(Request $request, string $date): JsonResponse

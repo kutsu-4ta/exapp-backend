@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('daily-logs', [DailyLogController::class, 'store']);
     Route::get('daily-logs/{date}', [DailyLogController::class, 'show']);
     Route::put('daily-logs/{date}', [DailyLogController::class, 'update']);
+    Route::delete('daily-logs/{date}', [DailyLogController::class, 'destroy']);
     Route::post('daily-logs/{date}/complete', [DailyLogController::class, 'complete']);
     Route::post('daily-logs/{date}/uncomplete', [DailyLogController::class, 'uncomplete']);
 

@@ -71,4 +71,9 @@ class EloquentDailyLogRepository implements DailyLogRepositoryInterface
 
         return $dailyLog->load('studySessions.subject');
     }
+
+    public function delete(DailyLog $dailyLog): void
+    {
+        $dailyLog->delete();
+    }
 }

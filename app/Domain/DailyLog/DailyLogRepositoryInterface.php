@@ -22,4 +22,6 @@ interface DailyLogRepositoryInterface
     public function complete(DailyLog $dailyLog): DailyLog;
 
     public function uncomplete(DailyLog $dailyLog): DailyLog;
+
+    public function delete(DailyLog $dailyLog): void;
 }
