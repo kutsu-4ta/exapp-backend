@@ -44,8 +44,8 @@ class AnalyzeProblemImageUseCase
 
 ```json
 {
-  "subject": "科目",
-  "subCategory": "小分類"
+  "subject_name": "科目",
+  "sub_category_name": "小分類"
   "question_ref": "問題番号",
   "note": "ノート",
   "failure_types": ミスタイプ,
@@ -73,8 +73,8 @@ PROMPT;
         $validFailureTypes = $this->filterFailureTypes($json['failure_types'] ?? []);
 
         return [
-            'subject_name' =>  $json['subject'] ?? null,
-            'subCategory' =>  $json['subCategory'] ?? null,
+            'subject_name' =>  $json['subject_name'] ?? null,
+            'sub_category_name' =>  $json['sub_category_name'] ?? null,
             'question_ref' => is_string($json['question_ref'] ?? null) ? $json['question_ref'] : null,
             'note' => is_string($json['note'] ?? null) ? $json['note'] : null,
             'proficiency' => Proficiency::Incorrect->value, // デフォルトで「×」
