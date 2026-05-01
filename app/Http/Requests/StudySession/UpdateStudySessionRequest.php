@@ -14,7 +14,7 @@ class UpdateStudySessionRequest extends FormRequest
         return [
             'timeSlot' => ['required', 'string', Rule::enum(TimeSlot::class)],
             'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
-            'subject' => ['required', 'string', Rule::exists('subjects', 'name')],
+            'subject' => ['required', 'string'],
             'material' => ['required', 'string', Rule::enum(Material::class)],
             'subCategoryId' => [
                 'nullable',

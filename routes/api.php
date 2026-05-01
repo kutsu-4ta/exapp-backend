@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
+use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamSessionController;
 use App\Http\Controllers\MonthlySettingController;
@@ -20,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // 科目
+    Route::get('subjects', [SubjectController::class, 'index']);
+    Route::put('subjects/{name}', [SubjectController::class, 'update']);
+    Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
 
     // 小分類
     Route::get('sub-categories', [SubCategoryController::class, 'index']);

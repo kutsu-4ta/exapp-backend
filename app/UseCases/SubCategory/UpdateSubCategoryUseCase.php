@@ -3,12 +3,14 @@
 namespace App\UseCases\SubCategory;
 
 use App\Domain\SubCategory\SubCategoryRepositoryInterface;
+use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Models\SubCategory;
 
 class UpdateSubCategoryUseCase
 {
     public function __construct(
         private readonly SubCategoryRepositoryInterface $repository,
+        private readonly SubjectRepositoryInterface $subjectRepository,
     ) {}
 
     public function __invoke(int $userId, int $id, array $data): SubCategory
@@ -19,6 +21,11 @@ class UpdateSubCategoryUseCase
             abort(404);
         }
 
-        return $this->repository->update($subCategory, $data);
+        $subjectId = $this->subjectRepository->firstOrCreate($userId, $data['subject'])->id;
+
+        return $this->repository->update($subCategory, array_merge(
+            array_diff_key($data, ['subject' => null]),
+            ['subject_id' => $subjectId],
+        ));
     }
 }

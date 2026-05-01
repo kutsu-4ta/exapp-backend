@@ -3,59 +3,70 @@
 namespace App\Infrastructure\Repositories;
 
 use App\Domain\Subject\SubjectRepositoryInterface;
-use App\Models\Subject;
+use App\Models\ExamSession;
+use App\Models\Problem;
+use App\Models\StudySession;
 use App\Models\SubCategory;
+use App\Models\Subject;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class EloquentSubjectRepository implements SubjectRepositoryInterface
 {
-    /**
-     * 全科目の取得（表示順）
-     */
-    public function findAll(): Collection
+    public function findAll(int $userId): Collection
     {
-        return Subject::orderBy('display_order')->get();
+        return Subject::where('user_id', $userId)->orderBy('display_order')->get();
     }
 
-    /**
-     * IDによる取得
-     */
-    public function findById(int $id): ?Subject
+    public function findByName(int $userId, string $name): ?Subject
     {
-        return Subject::find($id);
+        return Subject::where('user_id', $userId)->where('name', $name)->first();
     }
 
-    /**
-     * 名前による取得
-     */
-    public function findByName(string $name): ?Subject
+    public function firstOrCreate(int $userId, string $name): Subject
     {
-        return Subject::where('name', $name)->first();
+        return Subject::firstOrCreate(
+            ['user_id' => $userId, 'name' => $name],
+            ['display_order' => (Subject::where('user_id', $userId)->max('display_order') ?? -1) + 1],
+        );
     }
 
-    /**
-     * 新規ユーザー登録時の初期論点データ投入
-     */
+    public function rename(Subject $subject, string $newName): Subject
+    {
+        $subject->update(['name' => $newName]);
+        return $subject->fresh();
+    }
+
+    public function delete(Subject $subject): void
+    {
+        DB::transaction(function () use ($subject) {
+            StudySession::where('subject_id', $subject->id)->delete();
+            Problem::where('subject_id', $subject->id)->delete();
+            ExamSession::where('subject_id', $subject->id)->delete();
+            $subject->delete(); // sub_categories cascade via FK
+        });
+    }
+
     public function seedDefaults(int $userId): void
     {
-        $subjects = $this->findAll();
-
-        // 診断士試験の各科目における主要な論点（SubCategory）
         $defaults = [
-            '企業経営理論' => ['ドメイン・成長戦略', '経営資源戦略・VRIO', '組織構造・組織文化', '動機付け理論', 'マーケティング・ミックス'],
-            '財務・会計' => ['財務諸表分析', 'CVP分析', '意思決定会計', '資本コスト・CAPM', '証券投資論'],
-            '運営管理' => ['生産計画・工程管理', '在庫管理・JIT', '店舗施設・陳列', '物流・SCM'],
             '経済学・経済政策' => ['国民所得統計', 'IS-LM分析', 'AD-AS分析', '市場の失敗'],
-            '経営法務' => ['会社法', '知的財産権', '民法'],
+            '財務・会計'       => ['財務諸表分析', 'CVP分析', '意思決定会計', '資本コスト・CAPM', '証券投資論'],
+            '企業経営理論'     => ['ドメイン・成長戦略', '経営資源戦略・VRIO', '組織構造・組織文化', '動機付け理論', 'マーケティング・ミックス'],
+            '運営管理'         => ['生産計画・工程管理', '在庫管理・JIT', '店舗施設・陳列', '物流・SCM'],
+            '経営法務'         => ['会社法', '知的財産権', '民法'],
             '経営情報システム' => ['ITインフラ', 'システム開発', '情報セキュリティ'],
             '中小企業経営・政策' => ['中小企業基本法', '中小企業白書'],
         ];
 
-        foreach ($subjects as $subject) {
-            if (!isset($defaults[$subject->name])) continue;
-
-            foreach ($defaults[$subject->name] as $subName) {
-                SubCategory::create([
+        foreach (array_keys($defaults) as $order => $subjectName) {
+            $subNames = $defaults[$subjectName];
+            $subject = Subject::firstOrCreate(
+                ['user_id' => $userId, 'name' => $subjectName],
+                ['display_order' => $order],
+            );
+            foreach ($subNames as $subName) {
+                SubCategory::firstOrCreate([
                     'user_id'    => $userId,
                     'subject_id' => $subject->id,
                     'name'       => $subName,

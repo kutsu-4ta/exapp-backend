@@ -7,15 +7,15 @@ use Illuminate\Support\Collection;
 
 interface SubjectRepositoryInterface
 {
-    /** 全科目の取得（display_order順） */
-    public function findAll(): Collection;
+    public function findAll(int $userId): Collection;
 
-    /** IDによる取得 */
-    public function findById(int $id): ?Subject;
+    public function findByName(int $userId, string $name): ?Subject;
 
-    /** 名前による取得（Requestからの変換用） */
-    public function findByName(string $name): ?Subject;
+    public function firstOrCreate(int $userId, string $name): Subject;
 
-    /** 新規ユーザーへのデフォルトデータ（SubCategoryなど）の投入 */
+    public function rename(Subject $subject, string $newName): Subject;
+
+    public function delete(Subject $subject): void;
+
     public function seedDefaults(int $userId): void;
 }

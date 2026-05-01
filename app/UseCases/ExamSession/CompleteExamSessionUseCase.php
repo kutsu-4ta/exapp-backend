@@ -21,7 +21,10 @@ class CompleteExamSessionUseCase
         }
 
         $session->subject_id = $subjectName !== null
-            ? Subject::firstOrCreate(['name' => $subjectName])->id
+            ? Subject::firstOrCreate(
+                ['user_id' => $userId, 'name' => $subjectName],
+                ['display_order' => (Subject::where('user_id', $userId)->max('display_order') ?? -1) + 1],
+            )->id
             : null;
         $session->exam_year = $examYear;
 

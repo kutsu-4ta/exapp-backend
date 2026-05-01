@@ -16,7 +16,10 @@ class CreateExamSessionUseCase
     {
         $subjectId = null;
         if ($subjectName !== null) {
-            $subjectId = Subject::firstOrCreate(['name' => $subjectName])->id;
+            $subjectId = Subject::firstOrCreate(
+                ['user_id' => $userId, 'name' => $subjectName],
+                ['display_order' => (Subject::where('user_id', $userId)->max('display_order') ?? -1) + 1],
+            )->id;
         }
 
         return $this->repository->create($userId, [

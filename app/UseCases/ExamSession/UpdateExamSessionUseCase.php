@@ -24,7 +24,10 @@ class UpdateExamSessionUseCase
 
         if (array_key_exists('subject', $data)) {
             $updateData['subject_id'] = $data['subject'] !== null
-                ? Subject::firstOrCreate(['name' => $data['subject']])->id
+                ? Subject::firstOrCreate(
+                    ['user_id' => $userId, 'name' => $data['subject']],
+                    ['display_order' => (Subject::where('user_id', $userId)->max('display_order') ?? -1) + 1],
+                )->id
                 : null;
         }
 

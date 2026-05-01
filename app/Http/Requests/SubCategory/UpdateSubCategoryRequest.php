@@ -10,7 +10,7 @@ class UpdateSubCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string', Rule::exists('subjects', 'name')],
+            'subject' => ['required', 'string'],
             'name' => ['required', 'string', 'max:255'],
         ];
     }

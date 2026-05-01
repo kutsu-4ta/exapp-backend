@@ -14,7 +14,7 @@ class GetExamSubjectStatsUseCase
 
     public function __invoke(int $userId, string $subjectName): array
     {
-        $subject = Subject::where('name', $subjectName)->firstOrFail();
+        $subject = Subject::where('user_id', $userId)->where('name', $subjectName)->firstOrFail();
 
         $sessions = $this->repository->findCompletedBySubject($userId, $subject->id);
 

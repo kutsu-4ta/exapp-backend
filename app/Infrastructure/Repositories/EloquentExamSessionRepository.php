@@ -24,7 +24,7 @@ class EloquentExamSessionRepository implements ExamSessionRepositoryInterface
         }
 
         if ($subject !== null) {
-            $query->whereHas('subject', fn ($q) => $q->where('name', $subject));
+            $query->whereHas('subject', fn ($q) => $q->where('name', $subject)->where('user_id', $userId));
         }
 
         return $query->get();

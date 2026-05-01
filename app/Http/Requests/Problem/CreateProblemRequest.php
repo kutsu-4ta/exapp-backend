@@ -13,7 +13,7 @@ class CreateProblemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string', Rule::exists('subjects', 'name')],
+            'subject' => ['required', 'string'],
             'material' => ['required', 'string', Rule::enum(Material::class)],
             'subCategoryId' => [
                 'nullable',
