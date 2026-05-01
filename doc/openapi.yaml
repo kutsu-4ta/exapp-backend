@@ -44,13 +44,13 @@ components:
 
     AiAdviceMode:
       type: string
-      enum: [ANALYSIS, INSPIRATION, ANALOGY, INSIGHT]
+      enum: [ANALYSIS, INSPIRATION, ANALOGY, WARNING]
       description: |
         AIアドバイスのモード。
         - ANALYSIS: 目標達成率と時間ブロック配置を論理的に分析
-        - INSPIRATION: 哲学・歴史の引用で学習努力を称える
-        - ANALOGY: 試験概念をIT/物理学に例えて解説
-        - INSIGHT: 試験知識と実務・最新技術を結ぶ洞察
+        - INSPIRATION: 客観的な事実で学習努力を称える
+        - ANALOGY: 試験概念を趣味に例えて解説
+        - WARNING: 危機感を煽る冷徹な鬼コーチ
 
     TimeSlot:
       type: string
@@ -1243,9 +1243,9 @@ paths:
         | モード | 内容 |
         |---|---|
         | `ANALYSIS` | 今週の達成率・残り時間を算出し、時間ブロック配置案を提案 |
-        | `INSPIRATION` | 連続学習日数などを哲学・歴史の引用とともに称えモチベを向上 |
-        | `ANALOGY` | 直近の学習科目の概念をIT/物理学に1対1マッピングして解説 |
-        | `INSIGHT` | 試験知識とSE実務・最新技術・言語学の予想外の接続を提示 |
+        | `INSPIRATION` | 客観的な事実で学習努力を称える |
+        | `ANALOGY` | 試験概念を趣味に例えて解説 |
+        | `WARNING` | 危機感を煽る冷徹な鬼コーチ |
       requestBody:
         required: true
         content:

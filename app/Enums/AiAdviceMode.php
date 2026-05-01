@@ -7,5 +7,5 @@ enum AiAdviceMode: string
     case ANALYSIS    = 'ANALYSIS';
     case INSPIRATION = 'INSPIRATION';
     case ANALOGY     = 'ANALOGY';
-    case INSIGHT     = 'INSIGHT';
+    case WARNING     = 'WARNING';
 }

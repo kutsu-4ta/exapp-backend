@@ -13,31 +13,31 @@ final class PromptBuilder
     {
         return match ($mode) {
             AiAdviceMode::ANALYSIS => <<<SYS
-あなたはユーザーの目標「{$ctx->profile->goal}」を達成するための戦略コーチです。
+あなたはユーザー（職業：{$ctx->profile->occupation}）の目標「{$ctx->profile->goal}」を達成するための戦略コーチです。
 提供された学習実績（達成率・残り時間・科目別配分）を定量的に分析し、目標から逆算した最も優先度の高い学習項目と、時間確保のための具体的な行動計画を論理的に提示してください。
 励ましや感情的な表現は排除し、データに基づく最適解のみを返してください。
 出力は100〜250文字。前置き、ラベル、挨拶は一切不要です。
 SYS,
 
             AiAdviceMode::INSPIRATION => <<<SYS
-あなたはユーザーの目標「{$ctx->profile->goal}」に寄り添う、精神的支柱となるメンターです。
+あなたはユーザー（職業：{$ctx->profile->occupation}）の目標「{$ctx->profile->goal}」に寄り添う、精神的支柱となるメンターです。
 ユーザーの継続日数や総学習時間などの「積み上げた実績」に焦点を当て、その努力が目標達成や自己肯定にどう寄与するかを、学術的な論分や論理的な理由を交えて伝えてください。
 ユーザーのモチベーションが上がるような前向きなトーンで返してください。
 出力は100〜250文字。前置き、ラベル、挨拶は一切不要です。
 SYS,
 
             AiAdviceMode::ANALOGY => <<<SYS
-あなたはユーザーの目標「{$ctx->profile->goal}」と「{$ctx->profile->interests}」の分野に詳しい解説者です。
+あなたはユーザー（職業：{$ctx->profile->occupation}）の目標「{$ctx->profile->goal}」と「{$ctx->profile->interests}」の分野に詳しい解説者です。
 ユーザーの目標に関わる知識を、「{$ctx->profile->interests}」の構造にマッピングして解説してください。
 「{$ctx->profile->interests}」の分野で使うような用語を比喩に使い、「概念の構造」を直感的に理解させてください。
 出力は100〜250文字。前置き、ラベル、挨拶は一切不要です。
 SYS,
 
-            AiAdviceMode::INSIGHT => <<<SYS
-あなたはユーザーの目標「{$ctx->profile->goal}」を実践する現場の人です。
-ユーザーが学習している学術的な知識が、実際にどのような相乗効果を生むか、実務的な洞察を提示してください。
-単なる解説に留まらず、学習内容が「現場の武器」に変わる視点を1文で提供してください。
-出力は100〜250文字。前置き、ラベル、挨拶は一切不要です。
+            AiAdviceMode::WARNING => <<<SYS
+あなたは難関試験を見守る極めて厳格で毒舌な先生です。
+ユーザー（職業：{$ctx->profile->occupation}）の甘い考えや、不足している学習実績、苦手科目の放置を冷徹に指摘し、「あなたは今のままでは100%落ちる」という危機感を突きつけてください。
+敬語で距離感はあるが、オブラートに包んだ表現や励ましは一切禁止。論理的かつ辛辣な言葉で、本気で合格を獲りに行くための緊張感を与えてください。
+出力は100〜250文字。前置き、ラベル、挨拶は不要です。
 SYS,
         };
     }
@@ -51,7 +51,7 @@ SYS,
             AiAdviceMode::ANALYSIS    => $this->analysisPrompt($ctx),
             AiAdviceMode::INSPIRATION => $this->inspirationPrompt($ctx),
             AiAdviceMode::ANALOGY     => $this->analogyPrompt($ctx),
-            AiAdviceMode::INSIGHT     => $this->insightPrompt($ctx),
+            AiAdviceMode::WARNING     => $this->warningPrompt($ctx),
         };
     }
 
@@ -66,24 +66,15 @@ SYS,
         $targetH      = round($ctx->profile->weeklyTargetMinutes / 60, 1);
         $thisWeekH    = round($ctx->thisWeekMinutes / 60, 1);
         $remainH      = round($ctx->weeklyRemainingMinutes() / 60, 1);
-        $rate         = $ctx->weeklyAchievementRate();
+//        $rate         = $ctx->weeklyAchievementRate();
 
         return <<<PROMPT
-【ユーザープロフィール】
-目標: {$ctx->profile->goal}
-職業: {$ctx->profile->occupation}
+今週は、週目標{$targetH}時間に対して{$thisWeekH}時間勉強しました。
+今月の科目別学習時間は{$subjectLines}です。
+苦手なのは{$weakLines}です。
+残りの{$remainH}時間の過ごし方のアドバイスがほしい。
+どの科目・時間帯に配置すれば最も効果的か教えてほしい。
 
-【今週の学習実績（週目標: {$targetH}時間）】
-実績: {$thisWeekH}時間（達成率: {$rate}%）
-残り: {$remainH}時間
-
-【今月の科目別学習時間（actual_logs）】
-{$subjectLines}
-
-【苦手科目（上位）】
-{$weakLines}
-
-上記をもとに、残り時間{$remainH}時間をどの科目・時間帯に配置すれば最も効果的かを1文で提案してください。
 PROMPT;
     }
 
@@ -93,16 +84,12 @@ PROMPT;
         $totalH       = round($ctx->totalMonthMinutes / 60, 1);
 
         return <<<PROMPT
-【ユーザーの学習実績】
-連続学習日数（current_streak）: {$ctx->currentStreak}日
-今月の総学習時間: {$totalH}時間（{$ctx->studyDays}日）
-直近7日: {$ctx->last7DaysMinutes}分
-直近の学習科目（subject）: {$ctx->lastSubject}
-
-【今月の科目別時間（actual_logs）】
-{$subjectLines}
-
-上記の努力を実績ベースで称え、さらなる一歩を踏み出す言葉をください。
+私は連続で{$ctx->currentStreak}日勉強しています。
+今月は{$ctx->studyDays}日で合計{$totalH}時間勉強しました。
+直近7日では{$ctx->last7DaysMinutes}分です。
+直近の学習科目は{$ctx->lastSubject}です。
+科目の割合は{$subjectLines}という感じです。
+私、こんなのじゃだめですよね。。。
 PROMPT;
     }
 
@@ -111,38 +98,28 @@ PROMPT;
         $weakLines = $this->formatWeakSubjects($ctx->weakSubjects);
 
         return <<<PROMPT
-【ユーザープロフィール】
-職業: {$ctx->profile->occupation}
-得意領域: {$ctx->profile->strongAreas}
-趣味・興味: {$ctx->profile->interests}
-
-【直近の学習科目（subject）】
-{$ctx->lastSubject}
-
-【苦手科目（参考）】
-{$weakLines}
-
-「{$ctx->lastSubject}」の重要概念を、{$ctx->profile->occupation}が日常で扱う技術（または物理学・言語学）に1対1でマッピングして説明してください。
+普段は{$ctx->profile->occupation}で仕事してて、最近は{$ctx->lastSubject}を勉強しました。
+{$weakLines}か{$ctx->profile->strongAreas}で{$ctx->profile->interests}とかに絡めて楽しい話してほしい。
+「{$ctx->lastSubject}」の話を、アナロジーで。
 PROMPT;
     }
 
-    private function insightPrompt(AdviceContext $ctx): string
+    private function warningPrompt(AdviceContext $ctx): string
     {
-        $subjectLines = $this->formatSubjectMinutes($ctx->subjectMinutes);
+        $targetH   = round($ctx->profile->weeklyTargetMinutes / 60, 1);
+        $thisWeekH = round($ctx->thisWeekMinutes / 60, 1);
+        $diffH     = $targetH - $thisWeekH;
+        $weakLines = $this->formatWeakSubjects($ctx->weakSubjects);
+        $lastSubject = $ctx->lastSubject ?: '未着手';
+
+        $status = ($diffH > 0) ? "目標に{$diffH}時間も届いていない惨状" : "時間は確保しているが中身が伴っているか怪しい状態";
 
         return <<<PROMPT
-【ユーザープロフィール】
-職業: {$ctx->profile->occupation}
-興味・嗜好: {$ctx->profile->interests}
-得意: {$ctx->profile->strongAreas}
-
-【直近の学習科目（subject）】
-{$ctx->lastSubject}
-
-【今月の学習範囲（actual_logs）】
-{$subjectLines}
-
-「{$ctx->lastSubject}」で学んだ知識が、{$ctx->profile->occupation}の実務や{$ctx->profile->interests}と意外な形で繋がる洞察を1文で提示してください。
+週目標{$targetH}時間に対し、実績はわずか{$thisWeekH}時間です。
+直近で触った科目は「{$lastSubject}」です。
+{$weakLines}は苦手なので放置してます。
+目標「{$ctx->profile->goal}」を掲げながら、この{$status}です。
+やばいけど、まあいけるっしょ。
 PROMPT;
     }
 
