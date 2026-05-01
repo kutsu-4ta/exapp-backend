@@ -20,7 +20,7 @@ class AiAdviceController extends Controller
             'mode' => ['required', 'string', Rule::enum(AiAdviceMode::class)],
         ]);
 
-        $user = $request->user();
+        $user = $request->user() ?? auth('sanctum')->user();
         $mode = AiAdviceMode::from($validated['mode']);
 
         $advice = ($this->useCase)($user->id, $mode);

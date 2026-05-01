@@ -5,6 +5,7 @@ namespace App\UseCases\AiAdvice;
 use App\Enums\AiAdviceMode;
 use App\Models\Problem;
 use App\Models\StudySession;
+use App\Models\UserProfile as UserProfileModel;
 use App\Services\AiAdvice\AdviceContext;
 use App\Services\AiAdvice\PromptBuilder;
 use App\Services\AiAdvice\UserProfile;
@@ -21,14 +22,34 @@ class GetAiAdviceUseCase
 
     public function __invoke(int $userId, AiAdviceMode $mode): string
     {
-        $now     = Carbon::now();
-        $profile = UserProfile::default(); // TODO: DB から取得する
-        $context = $this->buildContext($userId, $now, $profile);
+        $now      = Carbon::now();
+        $dbProfile = UserProfileModel::where('user_id', $userId)->first();
+        $profile  = $this->toServiceProfile($dbProfile);
+        $context  = $this->buildContext($userId, $now, $profile);
 
         $systemInstruction = $this->promptBuilder->systemInstruction($mode);
         $userPrompt        = $this->promptBuilder->userPrompt($mode, $context);
 
-        return $this->gemini->generateAdvice($systemInstruction, $userPrompt);
+        // ユーザーが個別トークンを登録していればそちらを優先
+        $geminiToken = $dbProfile?->gemini_token;
+
+        return $this->gemini->generateAdvice($systemInstruction, $userPrompt, $geminiToken);
+    }
+
+    private function toServiceProfile(?UserProfileModel $db): UserProfile
+    {
+        if ($db === null) {
+            return UserProfile::default();
+        }
+
+        return new UserProfile(
+            occupation:          $db->occupation          ?? UserProfile::default()->occupation,
+            goal:                $db->goal                ?? UserProfile::default()->goal,
+            weakAreas:           $db->weak_areas          ?? UserProfile::default()->weakAreas,
+            strongAreas:         $db->strong_areas        ?? UserProfile::default()->strongAreas,
+            interests:           $db->interests           ?? UserProfile::default()->interests,
+            weeklyTargetMinutes: UserProfile::default()->weeklyTargetMinutes,
+        );
     }
 
     // ----------------------------------------------------------------

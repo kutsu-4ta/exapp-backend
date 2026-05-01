@@ -3,6 +3,7 @@
 use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\MaterialController;
@@ -24,6 +25,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // プロフィール
+    Route::get('profile', [ProfileController::class, 'show']);
+    Route::put('profile', [ProfileController::class, 'update']);
 
     // 科目
     Route::get('subjects', [SubjectController::class, 'index']);

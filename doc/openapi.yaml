@@ -20,6 +20,28 @@ components:
       bearerFormat: JWT
 
   schemas:
+    UserProfile:
+      type: object
+      properties:
+        nickname:       { type: string, nullable: true }
+        occupation:     { type: string, nullable: true }
+        goal:           { type: string, nullable: true }
+        weakAreas:      { type: string, nullable: true }
+        strongAreas:    { type: string, nullable: true }
+        interests:      { type: string, nullable: true }
+        geminiTokenSet: { type: boolean, description: '個別Geminiトークンが登録済みかどうか（トークン本体は返さない）' }
+
+    UserProfileInput:
+      type: object
+      properties:
+        nickname:     { type: string, nullable: true, maxLength: 50 }
+        occupation:   { type: string, nullable: true, maxLength: 100 }
+        goal:         { type: string, nullable: true, maxLength: 500 }
+        weakAreas:    { type: string, nullable: true, maxLength: 500, description: '苦手科目（カンマ区切り等、自由記述）' }
+        strongAreas:  { type: string, nullable: true, maxLength: 500, description: '得意科目（カンマ区切り等、自由記述）' }
+        interests:    { type: string, nullable: true, maxLength: 500, description: '趣味・嗜好' }
+        geminiToken:  { type: string, nullable: true, maxLength: 200, description: 'ユーザー個別のGemini APIキー（保存時に暗号化）' }
+
     AiAdviceMode:
       type: string
       enum: [ANALYSIS, INSPIRATION, ANALOGY, INSIGHT]
@@ -1160,6 +1182,50 @@ paths:
                   email: { type: string, format: email }
         '401':
           description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Profile ──────────────────────────────────────────────────────────────────
+
+  /profile:
+    get:
+      summary: プロフィール取得
+      tags: [Profile]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '401':
+          description: 未認証
+    put:
+      summary: プロフィール更新（upsert）
+      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserProfileInput' }
+            example:
+              nickname: やっぴー
+              occupation: ITエンジニア（SE）
+              goal: 中小企業診断士試験に一発合格（週45時間学習）
+              weakAreas: 経営法務、中小企業経営・政策
+              strongAreas: 財務・会計、経営情報システム
+              interests: 物理学、歴史、哲学、言語学
+              geminiToken: AIzaSy...
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '401':
+          description: 未認証
+        '422':
+          description: バリデーションエラー
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
