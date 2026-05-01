@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('exam_sessions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('subject_id')->constrained()->restrictOnDelete();
+            $table->foreignId('subject_id')->nullable()->constrained()->nullOnDelete();
             $table->string('exam_year', 10);
             $table->string('status')->default('in_progress');
             $table->timestamp('completed_at')->nullable();

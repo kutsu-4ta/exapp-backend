@@ -13,9 +13,7 @@ class ProblemResource extends JsonResource
         return [
             'id' => $this->id,
             'subject' => $this->subject->name,
-            'material' => $this->material instanceof \App\Models\Material
-                ? $this->material->name
-                : $this->material,
+            'material' => $this->material?->name,
             'subCategoryId' => $this->sub_category_id,
             'questionRef' => $this->question_ref,
             'note' => $this->note,

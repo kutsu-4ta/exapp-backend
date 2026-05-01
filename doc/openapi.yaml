@@ -556,6 +556,32 @@ paths:
         '401':
           description: 未認証
 
+  /daily-logs/recent:
+    get:
+      summary: 直近のログ一覧を取得（カーソルベースページネーション）
+      tags: [Daily Logs]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 30 }
+          description: 取得件数
+        - name: before
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: このdateより前のログを取得（カーソル）
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DailyLogSummary' }
+        '401':
+          description: 未認証
+
   /daily-logs/{date}:
     parameters:
       - name: date

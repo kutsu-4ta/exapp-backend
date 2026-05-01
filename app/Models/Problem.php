@@ -48,4 +48,9 @@ class Problem extends Model
     {
         return $this->belongsTo(SubCategory::class);
     }
+
+    public function material(): BelongsTo
+    {
+        return $this->belongsTo(Material::class);
+    }
 }

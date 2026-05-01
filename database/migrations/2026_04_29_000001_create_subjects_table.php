@@ -10,9 +10,12 @@ return new class extends Migration
     {
         Schema::create('subjects', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
             $table->unsignedSmallInteger('display_order')->default(0);
             $table->timestamps();
+
+            $table->unique(['user_id', 'name']);
         });
     }
 
