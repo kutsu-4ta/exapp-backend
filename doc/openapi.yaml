@@ -1296,6 +1296,57 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /ai/analysis:
+    post:
+      summary: 問題画像を解析して苦手問題に登録
+      tags: [AI]
+      description: |
+        アップロードされた試験問題の画像を Gemini 1.5 Flash でマルチモーダル解析し、
+        科目・問題番号・要点・失敗タイプを自動抽出して苦手問題 (Problem) として保存する。
+
+        - 習熟度は `×`（未習得）で固定
+        - `solved_at` は本日の日付
+        - 科目が未登録の場合は自動作成
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: 問題画像（JPEG / PNG / WebP / HEIC、最大 10MB）
+      responses:
+        '201':
+          description: 解析成功・苦手問題として保存
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: バリデーションエラー（ファイル形式不正など）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Gemini が JSON を返さなかった場合など
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Gemini API 呼び出し失敗（クォータ超過など）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /auth/logout:
     post:
       summary: ログアウト

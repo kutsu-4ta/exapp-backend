@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiAdviceController;
+use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
@@ -80,6 +81,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // AIアドバイス
     Route::post('ai/advice', [AiAdviceController::class, 'advice']);
+
+    // AI画像解析
+    Route::post('ai/analysis', [AnalysisController::class, 'analyzeProblem']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

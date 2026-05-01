@@ -1,0 +1,98 @@
+<?php
+
+namespace App\UseCases\Analysis;
+
+use App\Domain\Problem\ProblemRepositoryInterface;
+use App\Domain\Subject\SubjectRepositoryInterface;
+use App\Enums\FailureType;
+use App\Enums\Proficiency;
+use App\Models\Problem;
+use App\Models\UserProfile;
+use App\Services\GeminiService;
+use Gemini\Enums\MimeType;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+
+class AnalyzeProblemImageUseCase
+{
+    public function __construct(
+        private readonly GeminiService $gemini,
+        private readonly SubjectRepositoryInterface $subjectRepository,
+        private readonly ProblemRepositoryInterface $problemRepository,
+    ) {}
+
+    public function __invoke(int $userId, UploadedFile $image): Problem
+    {
+        $subjects = $this->subjectRepository->findAll($userId)
+            ->pluck('name')
+            ->implode('、');
+
+        $prompt = <<<PROMPT
+あなたは中小企業診断士の試験対策アプリのアシスタントです。
+以下の画像は試験の過去問または問題集のページです。
+
+この問題を分析して、以下の JSON 形式で回答してください（他のテキストは一切含めないこと）。
+
+```json
+{
+  "subject": "科目名（後述の候補から選ぶ。なければ最も近いものを選ぶ）",
+  "question_ref": "問題番号や参照情報（例: 令和5年 第12問、Chapter3 Q5 など。不明なら null）",
+  "note": "この問題の要点・間違えやすいポイントを100字以内で記述",
+  "failure_types": ["定義漏れ", "解法ミス", "計算ミス"],
+  "is_good_question": true
+}
+```
+
+- `failure_types` は次の値のみ使用可: "定義漏れ"、"解法ミス"、"計算ミス"。該当なければ空配列 []。
+- `is_good_question` は繰り返し解く価値があるかどうか。
+- 科目候補: {$subjects}
+
+PROMPT;
+
+        $mimeType = $this->detectMimeType($image);
+        $binary   = file_get_contents($image->getRealPath());
+
+        $dbProfile   = UserProfile::where('user_id', $userId)->first();
+        $geminiToken = $dbProfile?->gemini_token;
+
+        $json = $this->gemini->analyzeImage($binary, $mimeType, $prompt, $geminiToken);
+
+        $subjectName  = is_string($json['subject'] ?? null) ? $json['subject'] : '';
+        $subjectId    = $this->subjectRepository->firstOrCreate($userId, $subjectName ?: '未分類')->id;
+
+        $validFailureTypes = $this->filterFailureTypes($json['failure_types'] ?? []);
+
+        return $this->problemRepository->create($userId, [
+            'subject_id'       => $subjectId,
+            'question_ref'     => is_string($json['question_ref'] ?? null) ? $json['question_ref'] : null,
+            'note'             => is_string($json['note'] ?? null) ? $json['note'] : null,
+            'proficiency'      => Proficiency::Incorrect->value,
+            'failure_types'    => $validFailureTypes,
+            'is_good_question' => (bool) ($json['is_good_question'] ?? false),
+            'solved_at'        => Carbon::today()->toDateString(),
+        ]);
+    }
+
+    private function detectMimeType(UploadedFile $image): MimeType
+    {
+        return match (strtolower($image->getClientOriginalExtension())) {
+            'jpg', 'jpeg' => MimeType::IMAGE_JPEG,
+            'png'         => MimeType::IMAGE_PNG,
+            'webp'        => MimeType::IMAGE_WEBP,
+            'heic'        => MimeType::IMAGE_HEIC,
+            default       => MimeType::IMAGE_JPEG,
+        };
+    }
+
+    /** @return string[] */
+    private function filterFailureTypes(mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $valid = array_column(FailureType::cases(), 'value');
+
+        return array_values(array_filter($raw, fn ($v) => is_string($v) && in_array($v, $valid, true)));
+    }
+}
