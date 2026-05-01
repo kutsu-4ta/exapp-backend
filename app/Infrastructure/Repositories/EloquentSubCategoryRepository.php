@@ -32,6 +32,15 @@ class EloquentSubCategoryRepository implements SubCategoryRepositoryInterface
         return SubCategory::where('user_id', $userId)->find($id);
     }
 
+    public function firstOrCreate(int $userId, int $subjectId, string $name): SubCategory
+    {
+        return SubCategory::firstOrCreate([
+            'user_id'    => $userId,
+            'subject_id' => $subjectId,
+            'name'       => $name,
+        ]);
+    }
+
     public function create(int $userId, array $data): SubCategory
     {
         // 外部からのデータが 'subject_id' になっていることを想定

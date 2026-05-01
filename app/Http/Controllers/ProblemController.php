@@ -48,15 +48,15 @@ class ProblemController extends Controller
         $problem = ($this->createUseCase)(
             $user->id,
             [
-                'subject' => $validated['subject'],
-                'sub_category_id' => $validated['subCategoryId'] ?? null,
-                'material' => $validated['material'],
-                'question_ref' => $validated['questionRef'],
-                'note' => $validated['note'] ?? null,
-                'proficiency' => $validated['proficiency'],
-                'failure_types' => $validated['failureTypes'],
+                'subject'          => $validated['subject'],
+                'sub_category'     => $validated['subCategory'] ?? null,
+                'material'         => $validated['material'],
+                'question_ref'     => $validated['questionRef'],
+                'note'             => $validated['note'] ?? null,
+                'proficiency'      => $validated['proficiency'],
+                'failure_types'    => $validated['failureTypes'],
                 'is_good_question' => $validated['isGoodQuestion'],
-                'solved_at' => $validated['solvedAt'],
+                'solved_at'        => $validated['solvedAt'],
             ],
         );
 
@@ -76,15 +76,15 @@ class ProblemController extends Controller
             $user->id,
             $id,
             [
-                'subject' => $validated['subject'],
-                'sub_category_id' => $validated['subCategoryId'] ?? null,
-                'material' => $validated['material'],
-                'question_ref' => $validated['questionRef'],
-                'note' => $validated['note'] ?? null,
-                'proficiency' => $validated['proficiency'],
-                'failure_types' => $validated['failureTypes'],
+                'subject'          => $validated['subject'],
+                'sub_category'     => $validated['subCategory'] ?? null,
+                'material'         => $validated['material'],
+                'question_ref'     => $validated['questionRef'],
+                'note'             => $validated['note'] ?? null,
+                'proficiency'      => $validated['proficiency'],
+                'failure_types'    => $validated['failureTypes'],
                 'is_good_question' => $validated['isGoodQuestion'],
-                'solved_at' => $validated['solvedAt'],
+                'solved_at'        => $validated['solvedAt'],
             ],
         );
 

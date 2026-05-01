@@ -12,13 +12,9 @@ class CreateProblemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string'],
-            'material' => 'required|string',
-            'subCategoryId' => [
-                'nullable',
-                'integer',
-                Rule::exists('sub_categories', 'id')->where('user_id', $this->user()->id),
-            ],
+            'subject'     => ['required', 'string'],
+            'material'    => ['required', 'string'],
+            'subCategory' => ['nullable', 'string', 'max:255'],
             'questionRef' => ['required', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:2000'],
             'proficiency' => ['required', 'string', Rule::enum(Proficiency::class)],

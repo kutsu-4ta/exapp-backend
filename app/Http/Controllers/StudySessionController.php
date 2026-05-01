@@ -34,12 +34,12 @@ class StudySessionController extends Controller
             $user->id,
             $validated['dailyLogDate'],
             [
-                'subject' => $validated['subject'],
-                'sub_category_id' => $validated['subCategoryId'] ?? null,
-                'time_slot' => $validated['timeSlot'],
-                'minutes' => $validated['minutes'],
-                'material' => $validated['material'],
-                'memo' => $validated['memo'] ?? null,
+                'subject'      => $validated['subject'],
+                'sub_category' => $validated['subCategory'] ?? null,
+                'time_slot'    => $validated['timeSlot'],
+                'minutes'      => $validated['minutes'],
+                'material'     => $validated['material'],
+                'memo'         => $validated['memo'] ?? null,
             ],
         );
 
@@ -59,12 +59,12 @@ class StudySessionController extends Controller
             $user->id,
             $id,
             [
-                'subject' => $validated['subject'],
-                'sub_category_id' => $validated['subCategoryId'] ?? null,
-                'time_slot' => $validated['timeSlot'],
-                'minutes' => $validated['minutes'],
-                'material' => $validated['material'],
-                'memo' => $validated['memo'] ?? null,
+                'subject'      => $validated['subject'],
+                'sub_category' => $validated['subCategory'] ?? null,
+                'time_slot'    => $validated['timeSlot'],
+                'minutes'      => $validated['minutes'],
+                'material'     => $validated['material'],
+                'memo'         => $validated['memo'] ?? null,
             ],
         );
 

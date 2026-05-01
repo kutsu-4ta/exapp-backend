@@ -52,13 +52,13 @@ class EloquentMaterialRepository implements MaterialRepositoryInterface
     {
         // 診断士試験でお馴染みの、主要な教材種別をデフォルトとして用意
         $defaults = [
+            'みん欲しテキスト',
+            'みん欲し問題集',
+            'スピ問',
+            'スタディング問題集',
             '過去問（1次）',
             '過去問（2次）',
-            'テキスト・参考書',
-            '問題集（スピード問題集等）',
-            '模試',
-            'スタディング / 診断士ゼミナール',
-            'YouTube / その他',
+            'YouTube',
         ];
 
         foreach ($defaults as $order => $name) {

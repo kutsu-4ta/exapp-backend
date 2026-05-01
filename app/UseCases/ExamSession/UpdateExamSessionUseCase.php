@@ -3,13 +3,14 @@
 namespace App\UseCases\ExamSession;
 
 use App\Domain\ExamSession\ExamSessionRepositoryInterface;
+use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Models\ExamSession;
-use App\Models\Subject;
 
 class UpdateExamSessionUseCase
 {
     public function __construct(
         private readonly ExamSessionRepositoryInterface $repository,
+        private readonly SubjectRepositoryInterface $subjectRepository,
     ) {}
 
     public function __invoke(int $id, int $userId, array $data): ExamSession
@@ -24,10 +25,7 @@ class UpdateExamSessionUseCase
 
         if (array_key_exists('subject', $data)) {
             $updateData['subject_id'] = $data['subject'] !== null
-                ? Subject::firstOrCreate(
-                    ['user_id' => $userId, 'name' => $data['subject']],
-                    ['display_order' => (Subject::where('user_id', $userId)->max('display_order') ?? -1) + 1],
-                )->id
+                ? $this->subjectRepository->firstOrCreate($userId, $data['subject'])->id
                 : null;
         }
 

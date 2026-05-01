@@ -73,7 +73,7 @@ components:
         minutes: { type: integer, minimum: 1 }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
-        subCategoryId: { type: integer, nullable: true }
+        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         memo: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -86,7 +86,7 @@ components:
         minutes: { type: integer, minimum: 1 }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
-        subCategoryId: { type: integer, nullable: true }
+        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         memo: { type: string, nullable: true }
 
     DailyLog:
@@ -128,7 +128,7 @@ components:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
-        subCategoryId: { type: integer, nullable: true }
+        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         questionRef: { type: string }
         note: { type: string, nullable: true }
         proficiency: { $ref: '#/components/schemas/Proficiency' }
@@ -144,7 +144,7 @@ components:
       properties:
         subject: { $ref: '#/components/schemas/Subject' }
         material: { $ref: '#/components/schemas/Material' }
-        subCategoryId: { type: integer, nullable: true }
+        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         questionRef: { type: string }
         note: { type: string, nullable: true }
         proficiency: { $ref: '#/components/schemas/Proficiency' }
