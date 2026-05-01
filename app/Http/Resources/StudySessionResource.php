@@ -15,7 +15,7 @@ class StudySessionResource extends JsonResource
             'timeSlot' => $this->time_slot->value,
             'minutes' => $this->minutes,
             'subject' => $this->subject->name,
-            'material' => $this->material->value,
+            'material' => $this->material->name,
             'subCategoryId' => $this->sub_category_id,
             'memo' => $this->memo,
             'createdAt' => $this->created_at->toIso8601String(),
