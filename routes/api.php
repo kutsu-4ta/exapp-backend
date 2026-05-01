@@ -13,6 +13,7 @@ use App\Http\Controllers\ExamSessionController;
 use App\Http\Controllers\MonthlySettingController;
 use App\Http\Controllers\ProblemController;
 use App\Http\Controllers\StudySessionController;
+use App\Http\Controllers\StopwatchController;
 use App\Http\Controllers\SubCategoryController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // AI画像解析
     Route::post('ai/analysis', [AnalysisController::class, 'analyzeProblem']);
+
+    // ストップウォッチ
+    Route::get('stopwatch', [StopwatchController::class, 'show']);
+    Route::post('stopwatch/start', [StopwatchController::class, 'start']);
+    Route::post('stopwatch/stop', [StopwatchController::class, 'stop']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

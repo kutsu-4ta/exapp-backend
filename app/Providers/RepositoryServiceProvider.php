@@ -10,8 +10,10 @@ use App\Domain\MonthlySetting\MonthlySettingRepositoryInterface;
 use App\Domain\Problem\ProblemRepositoryInterface;
 use App\Domain\StudySession\StudySessionRepositoryInterface;
 use App\Domain\SubCategory\SubCategoryRepositoryInterface;
+use App\Domain\Stopwatch\StopwatchRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
+use App\Infrastructure\Repositories\EloquentStopwatchRepository;
 use App\Infrastructure\Repositories\EloquentDailyLogRepository;
 use App\Infrastructure\Repositories\EloquentExamSessionRepository;
 use App\Infrastructure\Repositories\EloquentMaterialRepository;
@@ -35,5 +37,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(StudySessionRepositoryInterface::class, EloquentStudySessionRepository::class);
         $this->app->bind(ProblemRepositoryInterface::class, EloquentProblemRepository::class);
         $this->app->bind(ExamSessionRepositoryInterface::class, EloquentExamSessionRepository::class);
+        $this->app->bind(StopwatchRepositoryInterface::class, EloquentStopwatchRepository::class);
     }
 }

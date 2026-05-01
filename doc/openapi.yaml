@@ -20,6 +20,18 @@ components:
       bearerFormat: JWT
 
   schemas:
+    StopwatchState:
+      type: object
+      required: [isRunning, elapsedSeconds]
+      properties:
+        isRunning:
+          type: boolean
+          description: 現在計測中かどうか
+        elapsedSeconds:
+          type: integer
+          description: |
+            累積秒数。`isRunning = true` の場合は `保存済み秒数 + (現在時刻 - started_at)` を加算済みの値を返す。
+
     UserProfile:
       type: object
       properties:
@@ -359,6 +371,73 @@ components:
           description: '直近10件のミスメモ（note が入力されているもの）'
 
 paths:
+  # ── Stopwatch ─────────────────────────────────────────────────────────────────
+
+  /stopwatch:
+    get:
+      summary: ストップウォッチの現在状態を取得
+      tags: [Stopwatch]
+      description: |
+        `is_running = true` の場合、`elapsed_seconds` には
+        `保存済み累積秒数 + (現在時刻 - started_at)` を加算した値を返す。
+        フロントはこの値をそのまま表示すればよい。
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StopwatchState' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /stopwatch/start:
+    post:
+      summary: ストップウォッチを開始
+      tags: [Stopwatch]
+      description: |
+        `is_running = true` にして `started_at` をサーバー現在時刻で記録する。
+        すでに計測中の場合は **409 Conflict** を返す。
+        `elapsed_seconds` はリセットしない（累積）。
+      responses:
+        '200':
+          description: 開始成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StopwatchState' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: すでに計測中
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /stopwatch/stop:
+    post:
+      summary: ストップウォッチを停止
+      tags: [Stopwatch]
+      description: |
+        `elapsed_seconds += (現在時刻 - started_at)` を加算し、
+        `is_running = false`、`started_at = null` にする。
+        すでに停止中の場合は何もせず現在の状態を返す。
+      responses:
+        '200':
+          description: 停止成功（または停止済みのまま）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StopwatchState' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   # ── Subjects ─────────────────────────────────────────────────────────────────
 
   /subjects:
