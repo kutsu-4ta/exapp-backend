@@ -103,7 +103,7 @@ class AuthController extends Controller
 
         // ユーザー作成直後、あるいは初期データが欠損している場合にシードを実行
         // wasRecentlyCreated は Eloquent の標準機能
-        if ($user->wasRecentlyCreated || !$user->subjects()->exists()) {
+        if ($user->wasRecentlyCreated || $this->subjectRepository->findAll($user->id)->isEmpty()) {
             \DB::transaction(function () use ($user) {
                 $this->subjectRepository->seedDefaults($user->id);
                 $this->materialRepository->seedDefaults($user->id);
