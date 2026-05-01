@@ -24,7 +24,7 @@ class AuthController extends Controller
     {
         $request->validate(['id_token' => 'required|string']);
 
-        $user = $this->resolveUserFromFirebaseToken($request->input('id_token'), isNewRegistration: true);
+        $user = $this->resolveUserFromFirebaseToken($request->input('id_token'));
         $token = $this->issueToken($user);
 
         return response()->json([
@@ -37,9 +37,8 @@ class AuthController extends Controller
     {
         $request->validate(['id_token' => 'required|string']);
 
-        $user = $this->resolveUserFromFirebaseToken($request->input('id_token'), isNewRegistration: false);
+        $user = $this->resolveUserFromFirebaseToken($request->input('id_token'));
 
-        // 既存トークンをすべて削除してから新規発行
         $user->tokens()->delete();
         $token = $this->issueToken($user);
 
@@ -77,46 +76,39 @@ class AuthController extends Controller
      * Firebase IDトークンを検証してユーザーを返す。
      * isNewRegistration=true のとき、初回登録時の初期データ投入も行う。
      */
-    private function resolveUserFromFirebaseToken(string $idToken, bool $isNewRegistration): User
+    private function resolveUserFromFirebaseToken(string $idToken): User
     {
         try {
             $verified = $this->firebaseAuth->verifyIdToken($idToken);
         } catch (\Throwable $e) {
-            throw new AuthenticationException('Firebase IDトークンが無効です: ' . $e->getMessage());
+            // ここでエラーが出る場合は、DB以前に「トークン自体」が壊れているか期限切れ。
+            \Log::error('Firebase Verify Error: ' . $e->getMessage());
+            throw new AuthenticationException('Firebase IDトークンが無効です。');
         }
 
         $firebaseUid = $verified->claims()->get('sub');
         $email       = $verified->claims()->get('email');
         $name        = $verified->claims()->get('name');
 
-        // firebase_uid → email の順で既存ユーザーを探す
-        $user = User::where('firebase_uid', $firebaseUid)->first()
-            ?? User::where('email', $email)->first();
+        // ユーザーを取得または作成（updateOrCreate）
+        // firebase_uid をキーにしつつ、email も保持・更新する
+        $user = User::updateOrCreate(
+            ['firebase_uid' => $firebaseUid],
+            [
+                'name'  => $name ?? 'Google User',
+                'email' => $email,
+                'password' => null, // Firebase認証のためパスワード不要
+            ]
+        );
 
-        if ($user) {
-            // 既存ユーザー: firebase_uid が未紐付けならリンク、プロフィールを最新化
-            $user->firebase_uid = $user->firebase_uid ?? $firebaseUid;
-            $user->name         = $name ?? $user->name;
-            $user->email        = $email;
-            $user->save();
-
-            return $user;
+        // ユーザー作成直後、あるいは初期データが欠損している場合にシードを実行
+        // wasRecentlyCreated は Eloquent の標準機能
+        if ($user->wasRecentlyCreated || !$user->subjects()->exists()) {
+            \DB::transaction(function () use ($user) {
+                $this->subjectRepository->seedDefaults($user->id);
+                $this->materialRepository->seedDefaults($user->id);
+            });
         }
-
-        if (!$isNewRegistration) {
-            throw new AuthenticationException('ユーザーが見つかりません。先にGoogleログインで登録してください。');
-        }
-
-        // 新規ユーザー作成
-        $user = User::create([
-            'firebase_uid' => $firebaseUid,
-            'name'         => $name ?? 'Google User',
-            'email'        => $email,
-            'password'     => null,
-        ]);
-
-        $this->subjectRepository->seedDefaults($user->id);
-        $this->materialRepository->seedDefaults($user->id);
 
         return $user;
     }

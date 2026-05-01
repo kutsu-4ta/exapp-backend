@@ -20,7 +20,8 @@ if [ -z "$APP_KEY" ]; then
   export APP_KEY=$(php artisan key:generate --show --no-interaction)
 fi
 
-php artisan migrate --force
+php artisan migrate:fresh --force
+# php artisan migrate --force
 
 if [ "$APP_ENV" = "production" ]; then
   echo "Running in production mode"
