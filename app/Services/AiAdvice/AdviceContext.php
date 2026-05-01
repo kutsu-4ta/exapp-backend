@@ -20,14 +20,6 @@ final class AdviceContext
         public readonly UserProfile $profile,
     ) {}
 
-    public function weeklyAchievementRate(): float
-    {
-        if ($this->profile->weeklyTargetMinutes === 0) {
-            return 0.0;
-        }
-        return round($this->thisWeekMinutes / $this->profile->weeklyTargetMinutes * 100, 1);
-    }
-
     public function weeklyRemainingMinutes(): int
     {
         return max(0, $this->profile->weeklyTargetMinutes - $this->thisWeekMinutes);

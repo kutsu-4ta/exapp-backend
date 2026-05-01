@@ -19,14 +19,32 @@ class GetDashboardStatsUseCase
         $thirtyDaysAgo = $now->copy()->subDays(29)->toDateString();
 
         return [
+            'currentStreak' => $this->currentStreak($userId, $now),
+            'allTotalMinutes' => $this->allTotalMinutes($userId),
+            'allTotalDays' => $this->allTotalDays($userId),
             'thisMonthMinutes' => $this->thisMonthMinutes($userId, $year, $month),
             'thisMonthDays' => $this->thisMonthDays($userId, $year, $month),
+            'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId, $year, $month), // 月曜始まりの一週間
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
             'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
             'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
             'dailyMinutes' => $this->dailyMinutes($userId, $thirtyDaysAgo, $today),
         ];
+    }
+
+    private function allTotalMinutes(int $userId): int
+    {
+        return (int) StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->where('daily_logs.user_id', $userId)
+            ->sum('study_sessions.minutes');
+    }
+
+    private function allTotalDays(int $userId): int
+    {
+        return (int) DailyLog::where('user_id', $userId)
+            ->whereHas('studySessions')
+            ->count();
     }
 
     private function thisMonthMinutes(int $userId, int $year, int $month): int
@@ -45,6 +63,51 @@ class GetDashboardStatsUseCase
             ->whereMonth('date', $month)
             ->whereHas('studySessions')
             ->count();
+    }
+
+    // 連続学習日数
+    private function currentStreak(int $userId, Carbon $now): int
+    {
+        $streak  = 0;
+        $current = $now->copy()->startOfDay();
+
+        while (true) {
+            $dateStr = $current->toDateString();
+            $hasSession = DB::table('daily_logs')
+                ->where('user_id', $userId)
+                ->where('date', $dateStr)
+                ->whereExists(fn ($q) => $q->select(DB::raw(1))
+                    ->from('study_sessions')
+                    ->whereColumn('study_sessions.daily_log_id', 'daily_logs.id'))
+                ->exists();
+
+            if (!$hasSession) {
+                break;
+            }
+
+            $streak++;
+            $current->subDay();
+
+            // 無限ループ防止（最大365日）
+            if ($streak >= 365) {
+                break;
+            }
+        }
+
+        return $streak;
+    }
+
+    private function thisWeekTotalMinutes(int $userId): int
+    {
+        // 今週の月曜日の日付を取得 (Carbonはデフォルトで月曜が週の開始)
+        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
+        // 今日の日付を取得
+        $today = Carbon::now()->toDateString();
+
+        return (int) StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->where('daily_logs.user_id', $userId)
+            ->whereBetween('daily_logs.date', [$startOfWeek, $today])
+            ->sum('study_sessions.minutes');
     }
 
     private function last7DaysMinutes(int $userId, string $from, string $to): int

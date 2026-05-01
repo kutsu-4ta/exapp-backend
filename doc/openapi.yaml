@@ -198,8 +198,12 @@ components:
 
     DashboardStats:
       type: object
-      required: [thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, lastTouchedBySubject, dailyMinutes]
+      required: [thisWeekTotalMinutes, allTotalMinutes, thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, lastTouchedBySubject, dailyMinutes]
       properties:
+        thisWeekTotalMinutes: { type: integer}
+        currentStreak: { type: integer }
+        allTotalMinutes: { type: integer }
+        allTotalDays: { type: integer }
         thisMonthMinutes: { type: integer }
         thisMonthDays: { type: integer }
         last7DaysMinutes: { type: integer }
