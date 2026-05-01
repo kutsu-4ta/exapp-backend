@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\SubjectController;
+use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamSessionController;
 use App\Http\Controllers\MonthlySettingController;
@@ -32,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sub-categories', [SubCategoryController::class, 'store']);
     Route::put('sub-categories/{id}', [SubCategoryController::class, 'update']);
     Route::delete('sub-categories/{id}', [SubCategoryController::class, 'destroy']);
+
+    // 教材
+    Route::get('materials', [MaterialController::class, 'index']);
 
     // 月間設定
     Route::get('monthly-settings/{year}/{month}', [MonthlySettingController::class, 'show']);
