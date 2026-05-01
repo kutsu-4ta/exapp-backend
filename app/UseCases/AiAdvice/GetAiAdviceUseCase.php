@@ -27,7 +27,7 @@ class GetAiAdviceUseCase
         $profile  = $this->toServiceProfile($dbProfile);
         $context  = $this->buildContext($userId, $now, $profile);
 
-        $systemInstruction = $this->promptBuilder->systemInstruction($mode);
+        $systemInstruction = $this->promptBuilder->systemInstruction($mode, $context);
         $userPrompt        = $this->promptBuilder->userPrompt($mode, $context);
 
         // ユーザーが個別トークンを登録していればそちらを優先
