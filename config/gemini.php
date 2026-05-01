@@ -36,4 +36,6 @@ return [
     */
 
     'request_timeout' => env('GEMINI_REQUEST_TIMEOUT', 30),
+
+    'model' => env('GEMINI_MODEL', 'gemini-2.5-flash')
 ];

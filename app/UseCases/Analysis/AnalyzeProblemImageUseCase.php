@@ -6,7 +6,6 @@ use App\Domain\Problem\ProblemRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Enums\FailureType;
 use App\Enums\Proficiency;
-use App\Models\Problem;
 use App\Models\UserProfile;
 use App\Services\GeminiService;
 use Gemini\Enums\MimeType;
@@ -16,10 +15,11 @@ use Illuminate\Support\Carbon;
 class AnalyzeProblemImageUseCase
 {
     public function __construct(
-        private readonly GeminiService $gemini,
+        private readonly GeminiService              $gemini,
         private readonly SubjectRepositoryInterface $subjectRepository,
         private readonly ProblemRepositoryInterface $problemRepository,
-    ) {}
+    ) {
+    }
 
     public function __invoke(int $userId, UploadedFile $image): array
     {
@@ -50,12 +50,12 @@ class AnalyzeProblemImageUseCase
 PROMPT;
 
         $mimeType = $this->detectMimeType($image);
-        $binary   = file_get_contents($image->getRealPath());
+        $binary = file_get_contents($image->getRealPath());
 
-        $dbProfile   = UserProfile::where('user_id', $userId)->first();
+        $dbProfile = UserProfile::where('user_id', $userId)->first();
         $geminiToken = $dbProfile?->gemini_token;
 
-        $json = $this->gemini->analyzeImage($binary, $mimeType, $prompt, $geminiToken);
+        $json = $this->gemini->analyzeImage($binary, $mimeType->value, $prompt, $geminiToken);
 
         // 科目名の特定とIDの解決（DB保存はせず、既存IDの検索にとどめるか、新規ならnullで返す）
         $subjectName = is_string($json['subject_name'] ?? null) ? $json['subject_name'] : '未分類';
@@ -66,14 +66,14 @@ PROMPT;
         $validFailureTypes = $this->filterFailureTypes($json['failure_types'] ?? []);
 
         return [
-            'subject_id'       => $subject?->id, // 見つからなければ null。フロントで選択させる
-            'subject_name'     => $subjectName,
-            'question_ref'     => is_string($json['question_ref'] ?? null) ? $json['question_ref'] : null,
-            'note'             => is_string($json['note'] ?? null) ? $json['note'] : null,
-            'proficiency'      => Proficiency::Incorrect->value, // デフォルトで「×」
-            'failure_types'    => $validFailureTypes,
-            'is_good_question' => (bool) ($json['is_good_question'] ?? false),
-            'solved_at'        => Carbon::today()->toDateString(),
+            'subject_id' => $subject?->id, // 見つからなければ null。フロントで選択させる
+            'subject_name' => $subjectName,
+            'question_ref' => is_string($json['question_ref'] ?? null) ? $json['question_ref'] : null,
+            'note' => is_string($json['note'] ?? null) ? $json['note'] : null,
+            'proficiency' => Proficiency::Incorrect->value, // デフォルトで「×」
+            'failure_types' => $validFailureTypes,
+            'is_good_question' => (bool)($json['is_good_question'] ?? false),
+            'solved_at' => Carbon::today()->toDateString(),
         ];
     }
 
@@ -81,10 +81,10 @@ PROMPT;
     {
         return match (strtolower($image->getClientOriginalExtension())) {
             'jpg', 'jpeg' => MimeType::IMAGE_JPEG,
-            'png'         => MimeType::IMAGE_PNG,
-            'webp'        => MimeType::IMAGE_WEBP,
-            'heic'        => MimeType::IMAGE_HEIC,
-            default       => MimeType::IMAGE_JPEG,
+            'png' => MimeType::IMAGE_PNG,
+            'webp' => MimeType::IMAGE_WEBP,
+            'heic' => MimeType::IMAGE_HEIC,
+            default => MimeType::IMAGE_JPEG,
         };
     }
 
@@ -97,6 +97,6 @@ PROMPT;
 
         $valid = array_column(FailureType::cases(), 'value');
 
-        return array_values(array_filter($raw, fn ($v) => is_string($v) && in_array($v, $valid, true)));
+        return array_values(array_filter($raw, fn($v) => is_string($v) && in_array($v, $valid, true)));
     }
 }
