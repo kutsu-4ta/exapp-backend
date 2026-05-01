@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
@@ -71,6 +72,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ダッシュボード
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+
+    // AIアドバイス
+    Route::post('ai/advice', [AiAdviceController::class, 'advice']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

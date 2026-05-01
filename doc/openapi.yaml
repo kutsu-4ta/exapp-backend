@@ -20,6 +20,16 @@ components:
       bearerFormat: JWT
 
   schemas:
+    AiAdviceMode:
+      type: string
+      enum: [ANALYSIS, INSPIRATION, ANALOGY, INSIGHT]
+      description: |
+        AIアドバイスのモード。
+        - ANALYSIS: 目標達成率と時間ブロック配置を論理的に分析
+        - INSPIRATION: 哲学・歴史の引用で学習努力を称える
+        - ANALOGY: 試験概念をIT/物理学に例えて解説
+        - INSIGHT: 試験知識と実務・最新技術を結ぶ洞察
+
     TimeSlot:
       type: string
       enum: [morning, lunch, commute, night]
@@ -1150,6 +1160,68 @@ paths:
                   email: { type: string, format: email }
         '401':
           description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── AI Advice ────────────────────────────────────────────────────────────────
+
+  /ai/advice:
+    post:
+      summary: AIアドバイスを生成
+      tags: [AI]
+      description: |
+        ユーザーの学習ログ・苦手問題・目標データをもとに Gemini API を呼び出し、
+        モード別のアドバイスを生成して返す。
+
+        | モード | 内容 |
+        |---|---|
+        | `ANALYSIS` | 今週の達成率・残り時間を算出し、時間ブロック配置案を提案 |
+        | `INSPIRATION` | 連続学習日数などを哲学・歴史の引用とともに称えモチベを向上 |
+        | `ANALOGY` | 直近の学習科目の概念をIT/物理学に1対1マッピングして解説 |
+        | `INSIGHT` | 試験知識とSE実務・最新技術・言語学の予想外の接続を提示 |
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode]
+              properties:
+                mode:
+                  $ref: '#/components/schemas/AiAdviceMode'
+            examples:
+              analysis:
+                summary: ANALYSISモード
+                value: { mode: ANALYSIS }
+              inspiration:
+                summary: INSPIRATIONモード
+                value: { mode: INSPIRATION }
+      responses:
+        '200':
+          description: アドバイス生成成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [advice]
+                properties:
+                  advice:
+                    type: string
+                    description: 生成されたアドバイス（100〜250文字程度）
+                    example: '今週は財務・会計に集中しているが、法務が0分。残り12時間のうち3時間を法務に充て、過去問2年分を解くことで弱点を一気に潰せる。'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: modeが不正
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Gemini API 呼び出し失敗
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
