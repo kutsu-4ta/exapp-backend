@@ -30,6 +30,18 @@ components:
       type: string
       description: ユーザーが定義した教材名
 
+    AlertSettings:
+      type: object
+      required: [thresholdDays, includeUntouched]
+      properties:
+        thresholdDays:
+          type: integer
+          minimum: 1
+          description: '何日間学習がなければ警告するか'
+        includeUntouched:
+          type: boolean
+          description: '一度も学習していない科目も警告対象に含めるか'
+
     SubCategory:
       type: object
       required: [id, subject, name, createdAt, updatedAt]
@@ -394,6 +406,88 @@ paths:
               schema:
                 type: array
                 items: { type: string }
+        '401':
+          description: 未認証
+
+  /materials/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた教材名
+    put:
+      summary: 教材名を変更
+      tags: [Materials]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newName]
+              properties:
+                newName: { type: string, description: '新しい教材名' }
+      responses:
+        '200':
+          description: 変更成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+        '401':
+          description: 未認証
+        '404':
+          description: 教材が見つからない
+        '409':
+          description: 同名の教材が既に存在する
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      summary: 教材を削除
+      description: |
+        教材を削除する。この教材が紐づく学習記録・苦手問題の material フィールドは空文字列に更新される。
+      tags: [Materials]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 未認証
+        '404':
+          description: 教材が見つからない
+
+  # ── Alert Settings ──────────────────────────────────────────────────────────
+
+  /alert-settings:
+    get:
+      summary: アラート設定を取得
+      tags: [Alert Settings]
+      description: ユーザーのアラート通知設定を返す。未設定の場合はデフォルト値を返す。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertSettings' }
+        '401':
+          description: 未認証
+    put:
+      summary: アラート設定を保存
+      tags: [Alert Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AlertSettings' }
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertSettings' }
         '401':
           description: 未認証
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\SubjectController;
@@ -36,6 +37,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 教材
     Route::get('materials', [MaterialController::class, 'index']);
+    Route::put('materials/{name}', [MaterialController::class, 'update']);
+    Route::delete('materials/{name}', [MaterialController::class, 'destroy']);
+
+    // アラート設定
+    Route::get('alert-settings', [AlertSettingController::class, 'show']);
+    Route::put('alert-settings', [AlertSettingController::class, 'upsert']);
 
     // 月間設定
     Route::get('monthly-settings/{year}/{month}', [MonthlySettingController::class, 'show']);

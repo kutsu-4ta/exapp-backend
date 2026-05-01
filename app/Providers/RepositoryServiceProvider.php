@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\AlertSetting\AlertSettingRepositoryInterface;
 use App\Domain\DailyLog\DailyLogRepositoryInterface;
 use App\Domain\ExamSession\ExamSessionRepositoryInterface;
 use App\Domain\Material\MaterialRepositoryInterface;
@@ -10,6 +11,7 @@ use App\Domain\Problem\ProblemRepositoryInterface;
 use App\Domain\StudySession\StudySessionRepositoryInterface;
 use App\Domain\SubCategory\SubCategoryRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
+use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
 use App\Infrastructure\Repositories\EloquentDailyLogRepository;
 use App\Infrastructure\Repositories\EloquentExamSessionRepository;
 use App\Infrastructure\Repositories\EloquentMaterialRepository;
@@ -24,6 +26,7 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(AlertSettingRepositoryInterface::class, EloquentAlertSettingRepository::class);
         $this->app->bind(SubjectRepositoryInterface::class, EloquentSubjectRepository::class);
         $this->app->bind(MaterialRepositoryInterface::class, EloquentMaterialRepository::class);
         $this->app->bind(SubCategoryRepositoryInterface::class, EloquentSubCategoryRepository::class);

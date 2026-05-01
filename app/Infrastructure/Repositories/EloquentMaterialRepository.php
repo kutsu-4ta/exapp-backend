@@ -4,7 +4,8 @@ namespace App\Infrastructure\Repositories;
 
 use App\Domain\Material\MaterialRepositoryInterface;
 use App\Models\Material;
-use App\Models\StudySession; // 学習記録との紐付けがある場合
+use App\Models\Problem;
+use App\Models\StudySession;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -41,9 +42,8 @@ class EloquentMaterialRepository implements MaterialRepositoryInterface
     public function delete(Material $material): void
     {
         DB::transaction(function () use ($material) {
-            // 教材に紐づく学習ログ等があればここでクリーンアップ
-            // StudySession::where('material_id', $material->id)->update(['material_id' => null]);
-
+            StudySession::where('material_id', $material->id)->update(['material_id' => null]);
+            Problem::where('material_id', $material->id)->update(['material_id' => null]);
             $material->delete();
         });
     }
