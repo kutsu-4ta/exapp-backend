@@ -19,7 +19,7 @@ class SubjectController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user() ?? auth('sanctum')->user();
         $subjects = ($this->listUseCase)($user->id);
 
         return response()->json($subjects->pluck('name')->values());
