@@ -24,7 +24,7 @@ class GetDashboardStatsUseCase
             'allTotalDays' => $this->allTotalDays($userId),
             'thisMonthMinutes' => $this->thisMonthMinutes($userId, $year, $month),
             'thisMonthDays' => $this->thisMonthDays($userId, $year, $month),
-            'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId, $year, $month), // 月曜始まりの一週間
+            'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId), // 月曜始まりの一週間
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
             'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),

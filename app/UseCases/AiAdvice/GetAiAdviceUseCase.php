@@ -90,7 +90,7 @@ class GetAiAdviceUseCase
     // DB クエリ群
     // ----------------------------------------------------------------
 
-    /** 今月の科目別学習分数（降順） */
+    /** 今月の科目別学習分数（降順）。['科目名' => 分数] の連想配列を返す */
     private function subjectMinutes(int $userId, int $year, int $month): array
     {
         return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
@@ -98,10 +98,13 @@ class GetAiAdviceUseCase
             ->where('daily_logs.user_id', $userId)
             ->whereYear('daily_logs.date', $year)
             ->whereMonth('daily_logs.date', $month)
-            ->groupBy('subjects.name')
+            ->groupBy('subjects.id', 'subjects.name')
             ->orderByDesc(DB::raw('SUM(study_sessions.minutes)'))
-            ->pluck(DB::raw('SUM(study_sessions.minutes)'), 'subjects.name')
-            ->map(fn ($m) => (int) $m)
+            ->get([
+                'subjects.name as subject_name',
+                DB::raw('SUM(study_sessions.minutes) as total_minutes'),
+            ])
+            ->mapWithKeys(fn ($row) => [$row->subject_name => (int) $row->total_minutes])
             ->toArray();
     }
 
@@ -127,16 +130,19 @@ class GetAiAdviceUseCase
             ->count();
     }
 
-    /** 苦手問題が多い科目（上位3件） */
+    /** 苦手問題が多い科目（上位3件）。['科目名' => 件数] の連想配列を返す */
     private function weakSubjects(int $userId): array
     {
         return Problem::join('subjects', 'subjects.id', '=', 'problems.subject_id')
             ->where('problems.user_id', $userId)
-            ->groupBy('subjects.name')
+            ->groupBy('subjects.id', 'subjects.name')
             ->orderByDesc(DB::raw('COUNT(problems.id)'))
             ->limit(3)
-            ->pluck(DB::raw('COUNT(problems.id)'), 'subjects.name')
-            ->map(fn ($c) => (int) $c)
+            ->get([
+                'subjects.name as subject_name',
+                DB::raw('COUNT(problems.id) as problem_count'),
+            ])
+            ->mapWithKeys(fn ($row) => [$row->subject_name => (int) $row->problem_count])
             ->toArray();
     }
 
