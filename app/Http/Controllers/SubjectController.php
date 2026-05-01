@@ -29,7 +29,7 @@ class SubjectController extends Controller
     {
         $request->validate(['newName' => ['required', 'string', 'max:255']]);
 
-        $user = $request->user();
+        $user = $request->user() ?? auth('sanctum')->user();
         $subject = ($this->renameUseCase)($user->id, urldecode($name), $request->input('newName'));
 
         return response()->json(['name' => $subject->name]);
@@ -37,7 +37,7 @@ class SubjectController extends Controller
 
     public function destroy(Request $request, string $name): Response
     {
-        $user = $request->user();
+        $user = $request->user() ?? auth('sanctum')->user();
         ($this->deleteUseCase)($user->id, urldecode($name));
 
         return response()->noContent();
