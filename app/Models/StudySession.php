@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Material;
 use App\Enums\TimeSlot;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +14,7 @@ class StudySession extends Model
         'sub_category_id',
         'time_slot',
         'minutes',
-        'material',
+        'material_id',
         'memo',
     ];
 
@@ -25,7 +24,7 @@ class StudySession extends Model
             'subject_id' => 'integer',
             'sub_category_id' => 'integer',
             'time_slot' => TimeSlot::class,
-            'material' => Material::class,
+            'material_id' => 'integer',
             'minutes' => 'integer',
         ];
     }
@@ -43,5 +42,10 @@ class StudySession extends Model
     public function subCategory(): BelongsTo
     {
         return $this->belongsTo(SubCategory::class);
+    }
+
+    public function material()
+    {
+        return $this->belongsTo( Material::class);
     }
 }

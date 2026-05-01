@@ -5,6 +5,7 @@ namespace App\UseCases\StudySession;
 use App\Domain\DailyLog\DailyLogRepositoryInterface;
 use App\Domain\StudySession\StudySessionRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
+use App\Domain\Material\MaterialRepositoryInterface;
 use App\Models\StudySession;
 
 class CreateStudySessionUseCase
@@ -13,6 +14,7 @@ class CreateStudySessionUseCase
         private readonly StudySessionRepositoryInterface $sessionRepository,
         private readonly DailyLogRepositoryInterface $dailyLogRepository,
         private readonly SubjectRepositoryInterface $subjectRepository,
+        private readonly MaterialRepositoryInterface $materialRepository,
     ) {}
 
     public function __invoke(int $userId, string $dailyLogDate, array $data): StudySession
@@ -24,10 +26,14 @@ class CreateStudySessionUseCase
         }
 
         $subjectId = $this->subjectRepository->firstOrCreate($userId, $data['subject'])->id;
+        $materialId = $this->materialRepository->firstOrCreate($userId, $data['material'])->id;
 
         return $this->sessionRepository->create($dailyLog->id, array_merge(
-            array_diff_key($data, ['subject' => null]),
-            ['subject_id' => $subjectId],
+            array_diff_key($data, ['subject' => null, 'material' => null]),
+            [
+                'subject_id' => $subjectId,
+                'material_id' => $materialId
+            ]
         ));
     }
 }

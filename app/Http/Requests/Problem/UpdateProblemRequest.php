@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Problem;
 
 use App\Enums\FailureType;
-use App\Enums\Material;
 use App\Enums\Proficiency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,7 +13,7 @@ class UpdateProblemRequest extends FormRequest
     {
         return [
             'subject' => ['required', 'string'],
-            'material' => ['required', 'string', Rule::enum(Material::class)],
+            'material' => 'required|string',
             'subCategoryId' => [
                 'nullable',
                 'integer',

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Material;
 use App\Enums\Proficiency;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +12,7 @@ class Problem extends Model
         'user_id',
         'subject_id',
         'sub_category_id',
-        'material',
+        'material_id',
         'question_ref',
         'note',
         'proficiency',
@@ -27,7 +26,7 @@ class Problem extends Model
         return [
             'subject_id' => 'integer',
             'sub_category_id' => 'integer',
-            'material' => Material::class,
+            'material_id' => 'integer',
             'proficiency' => Proficiency::class,
             'failure_types' => 'array',
             'is_good_question' => 'boolean',

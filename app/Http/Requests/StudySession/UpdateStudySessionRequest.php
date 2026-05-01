@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\StudySession;
 
-use App\Enums\Material;
 use App\Enums\TimeSlot;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,7 +14,7 @@ class UpdateStudySessionRequest extends FormRequest
             'timeSlot' => ['required', 'string', Rule::enum(TimeSlot::class)],
             'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'subject' => ['required', 'string'],
-            'material' => ['required', 'string', Rule::enum(Material::class)],
+            'material' => 'required|string',
             'subCategoryId' => [
                 'nullable',
                 'integer',

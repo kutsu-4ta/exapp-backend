@@ -15,7 +15,6 @@ return new class extends Migration
             $table->foreignId('sub_category_id')->nullable()->constrained()->nullOnDelete();
             $table->string('time_slot');
             $table->unsignedSmallInteger('minutes');
-            $table->string('material');
             $table->text('memo')->nullable();
             $table->timestamps();
 
