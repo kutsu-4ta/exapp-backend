@@ -12,6 +12,7 @@ use App\UseCases\DailyLog\CreateDailyLogUseCase;
 use App\UseCases\DailyLog\DeleteDailyLogUseCase;
 use App\UseCases\DailyLog\GetDailyLogUseCase;
 use App\UseCases\DailyLog\ListDailyLogsUseCase;
+use App\UseCases\DailyLog\ListRecentDailyLogsUseCase;
 use App\UseCases\DailyLog\UncompleteDailyLogUseCase;
 use App\UseCases\DailyLog\UpdateReflectionUseCase;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class DailyLogController extends Controller
 {
     public function __construct(
         private readonly ListDailyLogsUseCase $listUseCase,
+        private readonly ListRecentDailyLogsUseCase $listRecentUseCase,
         private readonly CreateDailyLogUseCase $createUseCase,
         private readonly GetDailyLogUseCase $getUseCase,
         private readonly UpdateReflectionUseCase $updateReflectionUseCase,
@@ -43,6 +45,18 @@ class DailyLogController extends Controller
             (int) $request->validated('year'),
             (int) $request->validated('month'),
         );
+
+        return response()->json(DailyLogSummaryResource::collection($logs));
+    }
+
+    public function recent(Request $request): JsonResponse
+    {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        $limit  = min((int) ($request->query('limit', 30)), 100);
+        $before = $request->query('before');
+
+        $logs = ($this->listRecentUseCase)($user->id, $limit, $before ?: null);
 
         return response()->json(DailyLogSummaryResource::collection($logs));
     }

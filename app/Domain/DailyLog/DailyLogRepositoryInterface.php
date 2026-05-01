@@ -24,4 +24,6 @@ interface DailyLogRepositoryInterface
     public function uncomplete(DailyLog $dailyLog): DailyLog;
 
     public function delete(DailyLog $dailyLog): void;
+
+    public function findRecent(int $userId, int $limit, ?string $before): Collection;
 }

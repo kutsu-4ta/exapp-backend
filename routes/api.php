@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // デイリーログ
     Route::get('daily-logs', [DailyLogController::class, 'index']);
+    Route::get('daily-logs/recent', [DailyLogController::class, 'recent']);
     Route::post('daily-logs', [DailyLogController::class, 'store']);
     Route::get('daily-logs/{date}', [DailyLogController::class, 'show']);
     Route::put('daily-logs/{date}', [DailyLogController::class, 'update']);

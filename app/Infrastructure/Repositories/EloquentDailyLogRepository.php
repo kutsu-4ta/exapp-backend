@@ -76,4 +76,15 @@ class EloquentDailyLogRepository implements DailyLogRepositoryInterface
     {
         $dailyLog->delete();
     }
+
+    public function findRecent(int $userId, int $limit, ?string $before): Collection
+    {
+        return DailyLog::where('user_id', $userId)
+            ->when($before, fn ($q) => $q->where('date', '<', $before))
+            ->withSum('studySessions', 'minutes')
+            ->withCount('studySessions')
+            ->orderByDesc('date')
+            ->limit($limit)
+            ->get();
+    }
 }
