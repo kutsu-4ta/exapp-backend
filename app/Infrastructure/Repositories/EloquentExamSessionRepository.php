@@ -68,19 +68,57 @@ class EloquentExamSessionRepository implements ExamSessionRepositoryInterface
 
             $rows = array_map(fn (array $q) => array_merge($q, [
                 'exam_session_id' => $session->id,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at'      => now(),
+                'updated_at'      => now(),
             ]), $questions);
 
             ExamQuestion::insert($rows);
 
             $session->update([
-                'status' => ExamSessionStatus::Completed,
+                'status'       => ExamSessionStatus::Completed,
                 'completed_at' => Carbon::now(),
             ]);
         });
 
         return $session->fresh(['subject', 'questions']);
+    }
+
+    public function upsertQuestion(int $sessionId, int $sortOrder, array $data): ExamQuestion
+    {
+        $question = ExamQuestion::firstOrCreate(
+            ['exam_session_id' => $sessionId, 'sort_order' => $sortOrder],
+            [
+                'display_id'   => $data['display_id']   ?? (string) $sortOrder,
+                'is_sub'       => $data['is_sub']        ?? false,
+                'has_children' => $data['has_children']  ?? false,
+                'rank'         => $data['rank']           ?? 'C',
+                'is_doubtful'  => $data['is_doubtful']   ?? false,
+                'point'        => $data['point']          ?? 0,
+            ],
+        );
+
+        $changed = false;
+
+        // answered_started_at は初回のみセット（上書きしない）
+        if (isset($data['answered_started_at']) && $question->answered_started_at === null) {
+            $question->answered_started_at = $data['answered_started_at'];
+            $changed = true;
+        }
+
+        if (isset($data['answered_finished_at'])) {
+            $question->answered_finished_at = $data['answered_finished_at'];
+            $question->answered_time_ms     = ExamQuestion::computeAnsweredTimeMs(
+                $question->answered_started_at,
+                $question->answered_finished_at,
+            );
+            $changed = true;
+        }
+
+        if ($changed) {
+            $question->save();
+        }
+
+        return $question->fresh();
     }
 
     public function findCompletedBySubject(int $userId, int $subjectId): Collection

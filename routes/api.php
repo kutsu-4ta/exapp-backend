@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('exam-sessions/{id}', [ExamSessionController::class, 'update']);
     Route::delete('exam-sessions/{id}', [ExamSessionController::class, 'destroy']);
     Route::post('exam-sessions/{id}/complete', [ExamSessionController::class, 'complete']);
+    Route::patch('exam-sessions/{id}/questions/{sortOrder}', [ExamSessionController::class, 'updateQuestion']);
 
     // 科目別試験分析
     Route::get('exam-subjects/{subject}/stats', [ExamSessionController::class, 'subjectStats']);

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExamSession\CompleteExamSessionRequest;
 use App\Http\Requests\ExamSession\CreateExamSessionRequest;
 use App\Http\Requests\ExamSession\ListExamSessionsRequest;
+use App\Http\Requests\ExamSession\UpdateExamQuestionRequest;
 use App\Http\Requests\ExamSession\UpdateExamSessionRequest;
+use App\Http\Resources\ExamQuestionResource;
 use App\Http\Resources\ExamSessionResource;
 use App\Http\Resources\ExamSessionSummaryResource;
 use App\UseCases\ExamSession\CompleteExamSessionUseCase;
@@ -14,6 +16,7 @@ use App\UseCases\ExamSession\DeleteExamSessionUseCase;
 use App\UseCases\ExamSession\GetExamSessionUseCase;
 use App\UseCases\ExamSession\GetExamSubjectStatsUseCase;
 use App\UseCases\ExamSession\ListExamSessionsUseCase;
+use App\UseCases\ExamSession\UpdateExamQuestionTimestampUseCase;
 use App\UseCases\ExamSession\UpdateExamSessionUseCase;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +33,7 @@ class ExamSessionController extends Controller
         private readonly DeleteExamSessionUseCase $deleteUseCase,
         private readonly CompleteExamSessionUseCase $completeUseCase,
         private readonly GetExamSubjectStatsUseCase $subjectStatsUseCase,
+        private readonly UpdateExamQuestionTimestampUseCase $updateQuestionUseCase,
     ) {}
 
     public function index(ListExamSessionsRequest $request): JsonResponse
@@ -141,6 +145,24 @@ class ExamSessionController extends Controller
         );
 
         return response()->json(new ExamSessionResource($session));
+    }
+
+    public function updateQuestion(UpdateExamQuestionRequest $request, int $id, int $sortOrder): JsonResponse
+    {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $question = ($this->updateQuestionUseCase)(
+            $id,
+            $user->id,
+            $sortOrder,
+            $request->validated(),
+        );
+
+        return response()->json(new ExamQuestionResource($question));
     }
 
     public function subjectStats(Request $request, string $subject): JsonResponse

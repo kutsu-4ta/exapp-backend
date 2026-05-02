@@ -23,8 +23,10 @@ class CompleteExamSessionRequest extends FormRequest
             'questions.*.isCorrect' => ['nullable', 'boolean'],
             'questions.*.isDoubtful' => ['required', 'boolean'],
             'questions.*.point' => ['required', 'integer', 'min:0'],
-            'questions.*.note' => ['nullable', 'string', 'max:2000'],
-            'questions.*.answeredTimeMs' => ['nullable', 'integer', 'min:0'],
+            'questions.*.note'              => ['nullable', 'string', 'max:2000'],
+            'questions.*.answeredTimeMs'    => ['nullable', 'integer', 'min:0'],
+            'questions.*.answeredStartedAt' => ['nullable', 'date'],
+            'questions.*.answeredFinishedAt' => ['nullable', 'date'],
         ];
     }
 }

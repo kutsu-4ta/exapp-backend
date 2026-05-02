@@ -21,8 +21,10 @@ class ExamQuestionResource extends JsonResource
             'isCorrect' => $this->is_correct,
             'isDoubtful' => $this->is_doubtful,
             'point' => $this->point,
-            'note' => $this->note,
-            'answeredTimeMs' => $this->answered_time_ms,
+            'note'               => $this->note,
+            'answeredTimeMs'     => $this->answered_time_ms,
+            'answeredStartedAt'  => $this->answered_started_at?->toIso8601String(),
+            'answeredFinishedAt' => $this->answered_finished_at?->toIso8601String(),
         ];
     }
 }

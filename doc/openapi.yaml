@@ -280,7 +280,9 @@ components:
         hasChildren: { type: boolean, description: '小問を持つ親問かどうか' }
         rank: { $ref: '#/components/schemas/Rank' }
         myAnswer: { type: string, nullable: true, description: 'ア〜オ または記述解答（未回答時はnull）' }
-        answeredTimeMs: { type: integer, nullable: true, description: '解答にかかった時間（ミリ秒）' }
+        answeredTimeMs:     { type: integer, nullable: true, description: 'サーバー確定の回答時間（ミリ秒）' }
+        answeredStartedAt:  { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
+        answeredFinishedAt: { type: string, format: date-time, nullable: true, description: '回答確定時刻（UTC ISO8601）' }
         isCorrect: { type: boolean, nullable: true, description: '正誤（null=未採点）' }
         isDoubtful: { type: boolean, description: '要復習フラグ' }
         point: { type: integer, description: '配点' }
@@ -289,6 +291,10 @@ components:
     ExamQuestionInput:
       type: object
       required: [sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point]
+      description: |
+        試験完了時に送信する問題データ。
+        `answeredStartedAt` と `answeredFinishedAt` を両方送ると、サーバーが `answeredTimeMs` を計算する。
+        タイムスタンプがない場合は `answeredTimeMs` のフォールバック値を使用。
       properties:
         sortOrder: { type: integer }
         displayId: { type: string }
@@ -300,7 +306,9 @@ components:
         isDoubtful: { type: boolean }
         point: { type: integer }
         note: { type: string, nullable: true }
-        answeredTimeMs: { type: integer, nullable: true, description: '解答時のストップウォッチ経過時間（ms）' }
+        answeredTimeMs:     { type: integer, nullable: true, description: 'フォールバック用（タイムスタンムがある場合はサーバーが上書き計算）' }
+        answeredStartedAt:  { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
+        answeredFinishedAt: { type: string, format: date-time, nullable: true, description: '回答確定時刻（UTC ISO8601）' }
 
     ExamSession:
       type: object
@@ -1149,6 +1157,81 @@ paths:
           description: 未認証
         '404':
           description: 見つからない
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /exam-sessions/{id}/questions/{sortOrder}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: 試験セッション ID
+      - name: sortOrder
+        in: path
+        required: true
+        schema: { type: integer, minimum: 0 }
+        description: 問題の表示順（0始まり）
+    patch:
+      summary: 問題の回答タイムスタンプを更新（中間記録）
+      tags: [Exam]
+      description: |
+        問題の表示開始（`event: "start"`）または回答確定（`event: "finish"`）を記録する。
+
+        **タイムスタンプはサーバー基準で記録する。** フロントが時刻を送る必要はない。
+
+        | event | 動作 |
+        |---|---|
+        | `start` | `answered_started_at = now()` をセット（初回のみ。既に記録済みなら無視）|
+        | `finish` | `answered_finished_at = now()` をセットし、`answered_time_ms` をサーバー計算 |
+
+        問題レコードがまだ存在しない場合は、提供されたメタデータで新規作成する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event:
+                  type: string
+                  enum: [start, finish]
+                  description: '`start` = 問題表示、`finish` = 回答確定'
+                displayId:
+                  type: string
+                  description: 問題の表示 ID（初回のみ使用）
+                isSub:       { type: boolean }
+                hasChildren: { type: boolean }
+                rank:        { $ref: '#/components/schemas/Rank' }
+                isDoubtful:  { type: boolean }
+                point:       { type: integer, minimum: 0 }
+            examples:
+              start:
+                summary: 問題表示時
+                value: { event: start, displayId: "第1問", isSub: false, hasChildren: false, rank: A, isDoubtful: false, point: 5 }
+              finish:
+                summary: 回答確定時
+                value: { event: finish }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamQuestion' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: 試験セッションが見つからない
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '422':
           description: バリデーションエラー
           content:
