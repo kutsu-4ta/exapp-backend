@@ -134,6 +134,23 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
+    PracticeSessionInput:
+      type: object
+      required: [subject, date, totalElapsedMs]
+      properties:
+        subject:        { $ref: '#/components/schemas/Subject' }
+        date:           { type: string, format: date }
+        totalElapsedMs: { type: integer, minimum: 0, description: '演習全体の経過時間（ミリ秒）' }
+
+    PracticeSessionResult:
+      type: object
+      required: [id, subject, date, totalMinutes]
+      properties:
+        id:           { type: integer }
+        subject:      { $ref: '#/components/schemas/Subject' }
+        date:         { type: string, format: date }
+        totalMinutes: { type: integer, description: '切り上げ後の分数（WorkspaceのStudySession作成に使用）' }
+
     StudySessionInput:
       type: object
       required: [timeSlot, minutes, subject, material]
@@ -196,17 +213,22 @@ components:
 
     ProblemInput:
       type: object
-      required: [subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt]
+      required: [subject, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt]
+      description: |
+        `materialId` と `materialName` のどちらか一方が必須。
+        - `materialId` が指定された場合は既存の教材を使用する。
+        - `materialId` が null で `materialName` が指定された場合は新規作成する。
       properties:
-        subject: { $ref: '#/components/schemas/Subject' }
-        material: { $ref: '#/components/schemas/Material' }
-        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
-        questionRef: { type: string }
-        note: { type: string, nullable: true }
-        proficiency: { $ref: '#/components/schemas/Proficiency' }
+        subject:      { $ref: '#/components/schemas/Subject' }
+        materialId:   { type: integer, nullable: true, description: '既存教材の ID（materialName と排他）' }
+        materialName: { type: string,  nullable: true, maxLength: 255, description: '新規作成する教材名（materialId と排他）' }
+        subCategory:  { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
+        questionRef:  { type: string }
+        note:         { type: string, nullable: true }
+        proficiency:  { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
-        solvedAt: { type: string, format: date }
+        solvedAt:     { type: string, format: date }
 
     DashboardStats:
       type: object
@@ -1505,6 +1527,35 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '503':
           description: Gemini API 呼び出し失敗（クォータ超過など）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Practice sessions ────────────────────────────────────────────────────────
+
+  /practice/sessions:
+    post:
+      summary: 演習セッションを保存する
+      tags: [Practice]
+      description: |
+        一問一答演習の結果を保存する。
+        バックエンドは受け取った totalElapsedMs を分単位（切り上げ）に変換し、
+        該当日の DailyLog に StudySession を自動生成することを推奨する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PracticeSessionInput' }
+      responses:
+        '201':
+          description: 保存成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PracticeSessionResult' }
+        '401':
+          description: 未認証
+        '422':
+          description: バリデーションエラー
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }

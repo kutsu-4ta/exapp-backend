@@ -11,6 +11,7 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamSessionController;
 use App\Http\Controllers\MonthlySettingController;
+use App\Http\Controllers\PracticeController;
 use App\Http\Controllers\ProblemController;
 use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\StopwatchController;
@@ -79,6 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ダッシュボード
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+
+    // 演習セッション
+    Route::post('practice/sessions', [PracticeController::class, 'store']);
 
     // AIアドバイス
     Route::post('ai/advice', [AiAdviceController::class, 'advice']);
