@@ -142,6 +142,32 @@ components:
         date:           { type: string, format: date }
         totalElapsedMs: { type: integer, minimum: 0, description: '演習全体の経過時間（ミリ秒）' }
 
+    PracticeAnswerRecord:
+      type: object
+      required: [index, answers, elapsedMs]
+      properties:
+        index: { type: integer, description: '問題番号（1始まり）' }
+        answers:
+          type: array
+          items:
+            type: object
+            required: [answer, isDoubtful]
+            properties:
+              answer:     { type: string, description: '選択肢（ア〜オ）または記述テキスト' }
+              isDoubtful: { type: boolean }
+              note:       { type: string, nullable: true, description: '選択肢ごとのメモ' }
+        elapsedMs: { type: integer, minimum: 0, description: 'この問題にかかった時間（ms）' }
+
+    PracticeSessionDraft:
+      type: object
+      required: [subject, currentIndex, log]
+      properties:
+        subject:      { $ref: '#/components/schemas/Subject' }
+        currentIndex: { type: integer, minimum: 1, description: '次に解く問題番号' }
+        log:
+          type: array
+          items: { $ref: '#/components/schemas/PracticeAnswerRecord' }
+
     PracticeSessionResult:
       type: object
       required: [id, subject, date, totalMinutes]
@@ -204,6 +230,7 @@ components:
         subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         questionRef: { type: string }
         note: { type: string, nullable: true }
+        defeatReason: { type: string, nullable: true, maxLength: 255, description: '敗因（ひとことメモ）' }
         proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
@@ -225,6 +252,7 @@ components:
         subCategory:  { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         questionRef:  { type: string }
         note:         { type: string, nullable: true }
+        defeatReason: { type: string, nullable: true, maxLength: 255, description: '敗因（ひとことメモ）' }
         proficiency:  { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
@@ -1532,6 +1560,58 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
 
   # ── Practice sessions ────────────────────────────────────────────────────────
+
+  /practice/sessions/draft:
+    put:
+      summary: 演習ドラフトを保存（途中再開用）
+      tags: [Practice]
+      description: |
+        演習途中の状態を保存する。同一科目のドラフトが存在する場合は上書きする。
+        フロントエンドは回答のたびに呼び出すことで、アプリ終了後の再開を可能にする。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PracticeSessionDraft' }
+      responses:
+        '204':
+          description: 保存成功
+        '401':
+          description: 未認証
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /practice/sessions/draft/{subject}:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+    get:
+      summary: 演習ドラフトを取得
+      tags: [Practice]
+      responses:
+        '200':
+          description: ドラフトが存在する
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PracticeSessionDraft' }
+        '404':
+          description: ドラフトなし
+        '401':
+          description: 未認証
+    delete:
+      summary: 演習ドラフトを削除（完了・破棄時）
+      tags: [Practice]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 未認証
 
   /practice/sessions:
     post:

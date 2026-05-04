@@ -82,6 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
 
     // 演習セッション
+    Route::put('practice/sessions/draft', [PracticeController::class, 'storeDraft']);
+    Route::get('practice/sessions/draft/{subject}', [PracticeController::class, 'showDraft']);
+    Route::delete('practice/sessions/draft/{subject}', [PracticeController::class, 'destroyDraft']);
     Route::post('practice/sessions', [PracticeController::class, 'store']);
 
     // AIアドバイス
