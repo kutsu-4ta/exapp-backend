@@ -63,10 +63,18 @@ class GetAiAdviceUseCase
      */
     private function resolveEnglishProfile(int $userId, ?UserProfileModel $dbProfile): UserProfile
     {
-        $aiProfile = AiUserProfile::where('user_id', $userId)->first();
+        try {
+            $aiProfile = AiUserProfile::where('user_id', $userId)->first();
 
-        if ($aiProfile === null && $dbProfile !== null) {
-            $aiProfile = $this->profileBuilder->buildAndSave($dbProfile);
+            if ($aiProfile === null && $dbProfile !== null) {
+                $aiProfile = $this->profileBuilder->buildAndSave($dbProfile);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AiUserProfile resolve failed, using default profile', [
+                'user_id' => $userId,
+                'error'   => $e->getMessage(),
+            ]);
+            return UserProfile::default();
         }
 
         $normalized    = $aiProfile?->normalized_prompt_json ?? [];
