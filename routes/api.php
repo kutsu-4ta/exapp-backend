@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 苦手問題
     Route::get('problems', [ProblemController::class, 'index']);
     Route::post('problems', [ProblemController::class, 'store']);
+    Route::get('problems/{id}', [ProblemController::class, 'show']);
     Route::put('problems/{id}', [ProblemController::class, 'update']);
     Route::delete('problems/{id}', [ProblemController::class, 'destroy']);
 

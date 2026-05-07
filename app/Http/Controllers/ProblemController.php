@@ -7,6 +7,7 @@ use App\Http\Requests\Problem\UpdateProblemRequest;
 use App\Http\Resources\ProblemResource;
 use App\UseCases\Problem\CreateProblemUseCase;
 use App\UseCases\Problem\DeleteProblemUseCase;
+use App\UseCases\Problem\GetProblemUseCase;
 use App\UseCases\Problem\ListProblemsUseCase;
 use App\UseCases\Problem\UpdateProblemUseCase;
 use Illuminate\Auth\AuthenticationException;
@@ -18,6 +19,7 @@ class ProblemController extends Controller
 {
     public function __construct(
         private readonly ListProblemsUseCase $listUseCase,
+        private readonly GetProblemUseCase $getUseCase,
         private readonly CreateProblemUseCase $createUseCase,
         private readonly UpdateProblemUseCase $updateUseCase,
         private readonly DeleteProblemUseCase $deleteUseCase,
@@ -34,6 +36,19 @@ class ProblemController extends Controller
         $problems = ($this->listUseCase)($user->id);
 
         return response()->json(ProblemResource::collection($problems));
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $problem = ($this->getUseCase)($user->id, $id);
+
+        return response()->json(new ProblemResource($problem));
     }
 
     public function store(CreateProblemRequest $request): JsonResponse
