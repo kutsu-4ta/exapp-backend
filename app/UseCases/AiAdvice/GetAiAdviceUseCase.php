@@ -2,13 +2,18 @@
 
 namespace App\UseCases\AiAdvice;
 
+use App\Domain\Material\MaterialRepositoryInterface;
 use App\Enums\AiAdviceMode;
+use App\Models\AiUserProfile;
 use App\Models\Problem;
 use App\Models\StudySession;
 use App\Models\UserProfile as UserProfileModel;
 use App\Services\AiAdvice\AdviceContext;
+use App\Services\AiAdvice\AdviceMessageFormatter;
+use App\Services\AiAdvice\AdviceResponseSchema;
 use App\Services\AiAdvice\PromptBuilder;
 use App\Services\AiAdvice\UserProfile;
+use App\Services\AiProfile\AiProfileBuilder;
 use App\Services\GeminiService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -16,45 +21,75 @@ use Illuminate\Support\Facades\DB;
 class GetAiAdviceUseCase
 {
     public function __construct(
-        private readonly GeminiService $gemini,
-        private readonly PromptBuilder $promptBuilder,
+        private readonly GeminiService               $gemini,
+        private readonly PromptBuilder               $promptBuilder,
+        private readonly AdviceMessageFormatter      $formatter,
+        private readonly AiProfileBuilder            $profileBuilder,
+        private readonly MaterialRepositoryInterface $materialRepository,
     ) {}
 
     public function __invoke(int $userId, AiAdviceMode $mode): string
     {
-        $now      = Carbon::now();
+        $now       = Carbon::now();
         $dbProfile = UserProfileModel::where('user_id', $userId)->first();
-        $profile  = $this->toServiceProfile($dbProfile);
-        $context  = $this->buildContext($userId, $now, $profile);
+
+        // AI向けキャッシュを取得。なければその場で生成する
+        $englishProfile = $this->resolveEnglishProfile($userId, $dbProfile);
+
+        $materials = $this->materialRepository
+            ->findAll($userId)
+            ->pluck('name')
+            ->all();
+
+        $context = $this->buildContext($userId, $now, $englishProfile, $materials);
 
         $systemInstruction = $this->promptBuilder->systemInstruction($mode, $context);
         $userPrompt        = $this->promptBuilder->userPrompt($mode, $context);
+        $schema            = AdviceResponseSchema::forMode($mode);
 
-        // ユーザーが個別トークンを登録していればそちらを優先
         $geminiToken = $dbProfile?->gemini_token;
 
-        return $this->gemini->generateAdvice($systemInstruction, $userPrompt, $geminiToken);
-    }
+        $json = $this->gemini->generateJson($systemInstruction, $userPrompt, $schema, $geminiToken);
 
-    private function toServiceProfile(?UserProfileModel $db): UserProfile
-    {
-        if ($db === null) {
-            return UserProfile::default();
-        }
-
-        return new UserProfile(
-            occupation:          $db->occupation          ?? UserProfile::default()->occupation,
-            goal:                $db->goal                ?? UserProfile::default()->goal,
-            weakAreas:           $db->weak_areas          ?? UserProfile::default()->weakAreas,
-            strongAreas:         $db->strong_areas        ?? UserProfile::default()->strongAreas,
-            interests:           $db->interests           ?? UserProfile::default()->interests,
-            weeklyTargetMinutes: UserProfile::default()->weeklyTargetMinutes,
-        );
+        return $this->formatter->format($mode, $json);
     }
 
     // ----------------------------------------------------------------
 
-    private function buildContext(int $userId, Carbon $now, UserProfile $profile): AdviceContext
+    /**
+     * ai_user_profiles から英語化済みプロファイルを取得する。
+     * レコードがなければ AiProfileBuilder でその場生成してキャッシュする。
+     * PromptBuilder は UserProfile DTO を受け取るので、normalized_prompt_json から再マッピングする。
+     */
+    private function resolveEnglishProfile(int $userId, ?UserProfileModel $dbProfile): UserProfile
+    {
+        $aiProfile = AiUserProfile::where('user_id', $userId)->first();
+
+        if ($aiProfile === null && $dbProfile !== null) {
+            $aiProfile = $this->profileBuilder->buildAndSave($dbProfile);
+        }
+
+        $normalized    = $aiProfile?->normalized_prompt_json ?? [];
+        $weeklyTargetH = $normalized['weeklyTargetH'] ?? 45;
+
+        return new UserProfile(
+            occupation:          $normalized['occupation'] ?? UserProfile::default()->occupation,
+            goal:                $normalized['goal']       ?? UserProfile::default()->goal,
+            weakAreas:           implode(', ', $normalized['weak']      ?? []),
+            strongAreas:         implode(', ', $normalized['strong']    ?? []),
+            interests:           implode(', ', $normalized['interests'] ?? []),
+            weeklyTargetMinutes: (int) ($weeklyTargetH * 60),
+        );
+    }
+
+    private function toDefaultProfile(): UserProfile
+    {
+        return UserProfile::default();
+    }
+
+    // ----------------------------------------------------------------
+
+    private function buildContext(int $userId, Carbon $now, UserProfile $profile, array $materials): AdviceContext
     {
         $year         = $now->year;
         $month        = $now->month;
@@ -83,6 +118,7 @@ class GetAiAdviceUseCase
             weakSubjects:       $weakSubjects,
             lastSubject:        $lastSubject,
             profile:            $profile,
+            materials:          $materials,
         );
     }
 
@@ -90,7 +126,6 @@ class GetAiAdviceUseCase
     // DB クエリ群
     // ----------------------------------------------------------------
 
-    /** 今月の科目別学習分数（降順）。['科目名' => 分数] の連想配列を返す */
     private function subjectMinutes(int $userId, int $year, int $month): array
     {
         return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
@@ -108,7 +143,6 @@ class GetAiAdviceUseCase
             ->toArray();
     }
 
-    /** 指定期間の合計学習分数 */
     private function rangeMinutes(int $userId, string $from, string $to): int
     {
         return (int) StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
@@ -117,7 +151,6 @@ class GetAiAdviceUseCase
             ->sum('study_sessions.minutes');
     }
 
-    /** 今月の学習日数 */
     private function studyDays(int $userId, int $year, int $month): int
     {
         return (int) DB::table('daily_logs')
@@ -130,7 +163,6 @@ class GetAiAdviceUseCase
             ->count();
     }
 
-    /** 苦手問題が多い科目（上位3件）。['科目名' => 件数] の連想配列を返す */
     private function weakSubjects(int $userId): array
     {
         return Problem::join('subjects', 'subjects.id', '=', 'problems.subject_id')
@@ -146,17 +178,15 @@ class GetAiAdviceUseCase
             ->toArray();
     }
 
-    /** 今日まで遡る連続学習日数 */
     private function currentStreak(int $userId, Carbon $now): int
     {
         $streak  = 0;
         $current = $now->copy()->startOfDay();
 
         while (true) {
-            $dateStr = $current->toDateString();
             $hasSession = DB::table('daily_logs')
                 ->where('user_id', $userId)
-                ->where('date', $dateStr)
+                ->where('date', $current->toDateString())
                 ->whereExists(fn ($q) => $q->select(DB::raw(1))
                     ->from('study_sessions')
                     ->whereColumn('study_sessions.daily_log_id', 'daily_logs.id'))
@@ -169,7 +199,6 @@ class GetAiAdviceUseCase
             $streak++;
             $current->subDay();
 
-            // 無限ループ防止（最大365日）
             if ($streak >= 365) {
                 break;
             }
@@ -178,7 +207,6 @@ class GetAiAdviceUseCase
         return $streak;
     }
 
-    /** 最後に学習した科目名（なければ空文字） */
     private function lastStudiedSubject(int $userId): string
     {
         $result = StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
@@ -188,6 +216,6 @@ class GetAiAdviceUseCase
             ->orderByDesc('study_sessions.id')
             ->value('subjects.name');
 
-        return $result ?? '（未記録）';
+        return $result ?? '';
     }
 }

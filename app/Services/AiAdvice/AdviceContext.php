@@ -18,6 +18,8 @@ final class AdviceContext
         public readonly array  $weakSubjects,
         public readonly string $lastSubject,
         public readonly UserProfile $profile,
+        /** @var string[] ユーザー登録済み教材名リスト */
+        public readonly array  $materials = [],
     ) {}
 
     public function weeklyRemainingMinutes(): int
