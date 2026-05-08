@@ -127,6 +127,10 @@ class GeminiService
         }
 
         if ($response->failed()) {
+            $status = data_get($response->json(), 'error.status');
+            if ($status === 'FAILED_PRECONDITION') {
+                throw new \RuntimeException('Gemini is not available in this region (FAILED_PRECONDITION)');
+            }
             throw new \RuntimeException(
                 "Gemini error: {$response->status()} {$response->body()}"
             );

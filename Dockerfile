@@ -39,7 +39,7 @@ RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoload
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-EXPOSE 8000
+EXPOSE 8080
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -68,7 +68,7 @@ PROMPT;
         $dbProfile = UserProfileModel::where('user_id', $userId)->first();
         $geminiToken = $dbProfile?->gemini_token;
 
-        $json = $this->gemini->analyzeImage($binary, $mimeType->value, $prompt, $geminiToken);
+        $json = $this->gemini->analyzeImage($binary, $mimeType->value, $prompt, [], $geminiToken);
 
         $validFailureTypes = $this->filterFailureTypes($json['failure_types'] ?? []);
 

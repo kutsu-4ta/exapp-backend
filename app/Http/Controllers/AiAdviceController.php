@@ -23,7 +23,14 @@ class AiAdviceController extends Controller
         $user = $request->user() ?? auth('sanctum')->user();
         $mode = AiAdviceMode::from($validated['mode']);
 
-        $advice = ($this->useCase)($user->id, $mode);
+        try {
+            $advice = ($this->useCase)($user->id, $mode);
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'FAILED_PRECONDITION')) {
+                return response()->json(['message' => 'AI機能はこのサーバーからご利用いただけません。'], 503);
+            }
+            throw $e;
+        }
 
         return response()->json(['advice' => $advice]);
     }
