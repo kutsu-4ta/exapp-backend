@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Exapp API
   description: 中小企業診断士 学習管理アプリ API仕様書
-  version: 0.2.0
+  version: 0.3.0
 
 servers:
   - url: /api
@@ -517,6 +517,25 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /stopwatch/reset:
+    post:
+      summary: ストップウォッチをリセット
+      tags: [Stopwatch]
+      description: |
+        `elapsed_seconds = 0`、`is_running = false`、`started_at = null` にリセットする。
+        計測中・停止中いずれの状態でもリセット可能。
+      responses:
+        '200':
+          description: リセット成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StopwatchState' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   # ── Subjects ─────────────────────────────────────────────────────────────────
 
   /subjects:
@@ -1019,6 +1038,12 @@ paths:
     get:
       summary: 苦手問題一覧を取得
       tags: [Problems]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+          description: 取得件数（省略時は全件）。`solved_at` 降順・`created_at` 降順で先頭から取得。
       responses:
         '200':
           description: OK
@@ -1552,6 +1577,11 @@ paths:
                   type: string
                   format: binary
                   description: 問題画像（JPEG / PNG / WebP / HEIC、最大 10MB）
+                memo:
+                  type: string
+                  nullable: true
+                  maxLength: 2000
+                  description: 解答時のユーザーメモ。指定するとGeminiのノート生成に間違えた原因・改善ポイントが追加される。
       responses:
         '201':
           description: 解析成功・苦手問題として保存

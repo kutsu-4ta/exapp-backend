@@ -33,7 +33,8 @@ class ProblemController extends Controller
             throw new AuthenticationException('ユーザー認証に失敗しました。');
         }
 
-        $problems = ($this->listUseCase)($user->id);
+        $limit = $request->integer('limit') ?: null;
+        $problems = ($this->listUseCase)($user->id, $limit);
 
         return response()->json(ProblemResource::collection($problems));
     }

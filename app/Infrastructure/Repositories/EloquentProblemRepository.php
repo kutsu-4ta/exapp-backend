@@ -8,12 +8,17 @@ use Illuminate\Support\Collection;
 
 class EloquentProblemRepository implements ProblemRepositoryInterface
 {
-    public function findAllByUser(int $userId): Collection
+    public function findAllByUser(int $userId, ?int $limit = null): Collection
     {
-        return Problem::where('user_id', $userId)
+        $query = Problem::where('user_id', $userId)
             ->orderByDesc('solved_at')
-            ->orderByDesc('created_at')
-            ->get();
+            ->orderByDesc('created_at');
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
     }
 
     public function findByIdAndUser(int $id, int $userId): ?Problem

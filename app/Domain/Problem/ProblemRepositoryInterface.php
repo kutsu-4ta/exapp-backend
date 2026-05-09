@@ -7,7 +7,7 @@ use Illuminate\Support\Collection;
 
 interface ProblemRepositoryInterface
 {
-    public function findAllByUser(int $userId): Collection;
+    public function findAllByUser(int $userId, ?int $limit = null): Collection;
 
     public function findByIdAndUser(int $id, int $userId): ?Problem;
 
