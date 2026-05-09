@@ -14,8 +14,9 @@ class AnalyzeProblemRequest extends FormRequest
                 'file',
                 'image',
                 'mimes:jpeg,jpg,png,webp,heic',
-                'max:10240', // 10MB
+                'max:10240',
             ],
+            'memo' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

@@ -16,7 +16,11 @@ class AnalysisController extends Controller
     public function analyzeProblem(AnalyzeProblemRequest $request): JsonResponse
     {
         $user    = $request->user() ?? auth('sanctum')->user();
-        $analysisResult = ($this->useCase)($user->id, $request->file('image'));
+        $analysisResult = ($this->useCase)(
+            $user->id,
+            $request->file('image'),
+            $request->input('memo'),
+        );
 
         return response()->json($analysisResult, 200);
     }

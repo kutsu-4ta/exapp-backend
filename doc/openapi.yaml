@@ -136,11 +136,28 @@ components:
 
     PracticeSessionInput:
       type: object
-      required: [subject, date, totalElapsedMs]
+      required: [subject, date, totalElapsedMs, questions]
       properties:
         subject:        { $ref: '#/components/schemas/Subject' }
         date:           { type: string, format: date }
         totalElapsedMs: { type: integer, minimum: 0, description: '演習全体の経過時間（ミリ秒）' }
+        questions:
+          type: array
+          items:
+            type: object
+            required: [index, judgement, elapsedMs]
+            properties:
+              index:     { type: integer, description: '問題番号（1始まり）' }
+              judgement: { type: string, description: '回答（複数設問はカンマ区切り、例: "ア,イ"）' }
+              elapsedMs: { type: integer, minimum: 0, description: 'この問題にかかった時間（ms）' }
+              note:      { type: string, nullable: true, description: '選択した選択肢のメモ（複数設問は改行結合）' }
+              memos:
+                type: array
+                description: '設問ごとの全選択肢メモ（judgement の順に対応）'
+                items:
+                  type: object
+                  additionalProperties: { type: string }
+                  description: '選択肢をキー、メモ本文を値とするオブジェクト（例: {"ア": "〜", "イ": "〜"}）'
 
     PracticeAnswerRecord:
       type: object
@@ -155,7 +172,11 @@ components:
             properties:
               answer:     { type: string, description: '選択肢（ア〜オ）または記述テキスト' }
               isDoubtful: { type: boolean }
-              note:       { type: string, nullable: true, description: '選択肢ごとのメモ' }
+              note:       { type: string, nullable: true, description: '選択した選択肢のメモ' }
+              memos:
+                type: object
+                additionalProperties: { type: string }
+                description: '全選択肢のメモ（例: {"ア": "〜", "イ": "〜"}）'
         elapsedMs: { type: integer, minimum: 0, description: 'この問題にかかった時間（ms）' }
 
     PracticeSessionDraft:

@@ -23,8 +23,9 @@ class AnalyzeProblemImageUseCase
     ) {
     }
 
-    public function __invoke(int $userId, UploadedFile $image): array
-    {$dbProfile = UserProfileModel::where('user_id', $userId)->first();
+    public function __invoke(int $userId, UploadedFile $image, ?string $memo = null): array
+    {
+        $dbProfile = UserProfileModel::where('user_id', $userId)->first();
         $profile  = $this->toServiceProfile($dbProfile);
         $goal = $profile->goal;
         $weak = $profile->weakAreas;
@@ -36,30 +37,33 @@ class AnalyzeProblemImageUseCase
             ->pluck('name')
             ->implode('、');
 
+        $memoSection = $memo !== null && trim($memo) !== ''
+            ? "\n\n- ユーザーのメモ（解答時の思考）:\n{$memo}\nを踏まえ、間違えた原因や改善ポイントを重点的に含めること。"
+            : '';
+
         $prompt = <<<PROMPT
 あなたは{$goal}のアシスタントです。
 この画像は試験の問題集のページです。
-
 この問題を分析して、以下の JSON 形式で回答してください（他のテキストは一切含めないこと）。
-
 ```json
 {
   "subject_name": "科目",
-  "sub_category_name": "小分類"
+  "sub_category_name": "小分類",
   "question_ref": "問題番号",
   "note": "ノート",
   "failure_types": ミスタイプ,
   "is_good_question": "良問"
 }
 ```
-
 - 科目は、{$subjects}の中から最も近いものを選ぶ。
 - 小分類は、{$subCategories}の中から最も近いものを選ぶ。
-- 問題番号は、問題番号や参照情報（例: 令和5年 第12問、Chapter3 Q5 など。不明なら null）
-- ノートは、この問題の要点・間違えやすいポイントを要約。ユーザーの得意（{$strong}）と不得意（{$weak}）を考慮する。
-- ミスタイプは、次の値のみ使用可: "定義ミス"、"解法ミス"、"計算ミス"。該当なければ空配列 []。
-- 良問は、複数のポイントにまたがっていたり、複数の公式を使う必要がある問題はtrue,頻出でないニッチな問題ならfalse。
-
+- 問題番号は、（例: 12問、不明なら null）
+- ノートは、問題の要約ではなく、復習時に一目で「解法パターン」がわかる「自分専用まとめ」としてください。
+- 以下の構成を含めること：
+  - 【直感的な理解】: 複雑な概念を、日常的な状況や立場に置き換えて説明。
+  - 【判断の軸】: 迷ったときに、AかBかを判定するための「チェック項目」や「思考のプロセス」。
+  - 【診断士試験の急所】: 過去問で狙われやすい「ひっかけパターン」や、覚えるべき「優先順位」。
+  {$memoSection}
 PROMPT;
 
         $mimeType = $this->detectMimeType($image);
