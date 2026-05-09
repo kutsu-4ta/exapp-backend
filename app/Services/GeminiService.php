@@ -150,6 +150,9 @@ class GeminiService
             if ($status === 'FAILED_PRECONDITION') {
                 throw new \RuntimeException('Gemini is not available in this region (FAILED_PRECONDITION)');
             }
+            if ($status === 'RESOURCE_EXHAUSTED' || $response->status() === 429) {
+                throw new \RuntimeException('Gemini quota exceeded (RESOURCE_EXHAUSTED)');
+            }
             throw new \RuntimeException(
                 "Gemini error: {$response->status()} {$response->body()}"
             );

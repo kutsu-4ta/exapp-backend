@@ -29,6 +29,9 @@ class AiAdviceController extends Controller
             if (str_contains($e->getMessage(), 'FAILED_PRECONDITION')) {
                 return response()->json(['message' => 'AI機能はこのサーバーからご利用いただけません。'], 503);
             }
+            if (str_contains($e->getMessage(), 'RESOURCE_EXHAUSTED')) {
+                return response()->json(['message' => 'APIの利用上限に達しました。しばらく待ってから再試行してください。'], 429);
+            }
             throw $e;
         }
 
