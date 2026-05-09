@@ -28,6 +28,7 @@ class GetDashboardStatsUseCase
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
             'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
+            'thisMonthSubjectMinutes' => $this->subjectMinutes($userId, $year, $month),
             'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
             'dailyMinutes' => $this->dailyMinutes($userId, $thirtyDaysAgo, $today),
         ];
