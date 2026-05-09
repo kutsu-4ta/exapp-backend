@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('stopwatch', [StopwatchController::class, 'show']);
     Route::post('stopwatch/start', [StopwatchController::class, 'start']);
     Route::post('stopwatch/stop', [StopwatchController::class, 'stop']);
+    Route::post('stopwatch/reset', [StopwatchController::class, 'reset']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

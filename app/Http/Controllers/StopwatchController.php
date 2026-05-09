@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\UseCases\Stopwatch\GetStopwatchUseCase;
+use App\UseCases\Stopwatch\ResetStopwatchUseCase;
 use App\UseCases\Stopwatch\StartStopwatchUseCase;
 use App\UseCases\Stopwatch\StopStopwatchUseCase;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,7 @@ class StopwatchController extends Controller
         private readonly GetStopwatchUseCase   $getUseCase,
         private readonly StartStopwatchUseCase $startUseCase,
         private readonly StopStopwatchUseCase  $stopUseCase,
+        private readonly ResetStopwatchUseCase $resetUseCase,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -36,6 +38,14 @@ class StopwatchController extends Controller
     {
         $user   = $request->user() ?? auth('sanctum')->user();
         $result = ($this->stopUseCase)($user->id);
+
+        return response()->json($result);
+    }
+
+    public function reset(Request $request): JsonResponse
+    {
+        $user   = $request->user() ?? auth('sanctum')->user();
+        $result = ($this->resetUseCase)($user->id);
 
         return response()->json($result);
     }

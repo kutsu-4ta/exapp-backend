@@ -26,9 +26,12 @@ class StopStopwatchUseCase
                 ];
             }
 
-            $sw->elapsed_seconds += (int) $sw->started_at->diffInSeconds(Carbon::now());
-            $sw->is_running       = false;
-            $sw->started_at       = null;
+            $diff = (int) $sw->started_at->diffInSeconds(Carbon::now());
+            if ($diff <= 86400) {
+                $sw->elapsed_seconds += $diff;
+            }
+            $sw->is_running  = false;
+            $sw->started_at  = null;
 
             $this->repository->save($sw);
 
