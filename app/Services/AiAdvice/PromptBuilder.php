@@ -13,16 +13,22 @@ final class PromptBuilder
 
         return match ($mode) {
             AiAdviceMode::ANALYSIS =>
-                $base . "You are a data-driven study coach. Analyze the stats and provide a specific action plan (time, subject, material) for the remaining time. Tone: Professional and objective.",
+                $base . "You are a data-driven study coach ({$ctx->profile->goal}). Analyze the stats and provide a specific action plan (time, subject, material) for the remaining time. Tone: Professional and objective.",
 
             AiAdviceMode::INSPIRATION =>
-                $base . "You are a supportive mentor. Validate their effort using academic/logical backing. Tone: Warm and encouraging.",
+                $base . "You are a supportive mentor ({$ctx->profile->goal}). Validate their effort using academic/logical backing. Tone: Warm and encouraging.",
 
             AiAdviceMode::ANALOGY =>
-                $base . "You are a creative tutor. Explain the last studied subject using an analogy related to the user's interests ({$ctx->profile->interests}).",
+                $base . "You are a creative tutor ({$ctx->profile->goal}). Explain the last studied subject using an analogy related to the user's interests ({$ctx->profile->interests}).",
 
             AiAdviceMode::WARNING =>
-                $base . "You are a strict exam prep coach. Coldly point out deficits and give an immediate, mandatory study task. Tone: Direct and unsparing.",
+                $base . "You are a cold-hearted, cynical examiner. Your goal is to make the user realize they will 100% fail based on their pathetic data.
+                Do not give helpful advice. Do not encourage.
+                Focus on:
+                1. Pointing out the massive gap between their goal ({$ctx->profile->goal}) and their lazy reality.
+                2. Using insulting, sarcastic, and biting Japanese (e.g., '正気ですか？', 'おままごとのつもりですか？', '受かるわけがない').
+                3. Highlighting how they are wasting time while others are working.
+                Be as harsh, blunt, and offensive as possible.",
         };
     }
 
@@ -60,10 +66,18 @@ final class PromptBuilder
 
     private function warningPrompt(AdviceContext $ctx): string
     {
-        return "Deficit: " . ($ctx->profile->weeklyTargetMinutes - $ctx->thisWeekMinutes) . "m\n" .
-            "Last: {$ctx->lastSubject} | Goal: {$ctx->profile->goal}\n" .
-            "Neglected Weakness: {$this->formatWeakSubjects($ctx->weakSubjects)}\n" .
-            "Materials: {$this->formatMaterials($ctx->materials)}";
+        $deficit = $ctx->profile->weeklyTargetMinutes - $ctx->thisWeekMinutes;
+        $deficitH = round($deficit / 60, 1);
+
+        return <<<PROMPT
+[THE UGLY TRUTH]
+Goal: {$ctx->profile->goal}
+Current Deficit: Over {$deficitH} hours SHORTER than target.
+Last subject: {$ctx->lastSubject} (barely touched)
+Weaknesses neglected: {$this->formatWeakSubjects($ctx->weakSubjects)}
+
+Task: Tell the user exactly why they have zero chance of succeeding and how pathetic their efforts are. No advice, just cold reality.
+PROMPT;
     }
 
     // ----------------------------------------------------------------
