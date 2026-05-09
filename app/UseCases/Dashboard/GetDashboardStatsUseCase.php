@@ -28,7 +28,7 @@ class GetDashboardStatsUseCase
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
             'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
-            'thisMonthSubjectMinutes' => $this->subjectMinutes($userId, $year, $month),
+            'allSubjectMinutes' => $this->allSubjectMinutes($userId),
             'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
             'dailyMinutes' => $this->dailyMinutes($userId, $thirtyDaysAgo, $today),
         ];
@@ -133,15 +133,32 @@ class GetDashboardStatsUseCase
     private function subjectMinutes(int $userId, int $year, int $month): array
     {
         return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
-            // subjects テーブルを結合して名前を取得するように変更
             ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
             ->where('daily_logs.user_id', $userId)
             ->whereYear('daily_logs.date', $year)
             ->whereMonth('daily_logs.date', $month)
-            ->groupBy('subjects.id', 'subjects.name') // subject_id または name でグループ化
+            ->groupBy('subjects.id', 'subjects.name')
             ->orderByDesc(DB::raw('SUM(study_sessions.minutes)'))
             ->get([
-                'subjects.name as subject', // 名前をエイリアスで取得
+                'subjects.name as subject',
+                DB::raw('SUM(study_sessions.minutes) as minutes'),
+            ])
+            ->map(fn ($row) => [
+                'subject' => $row->subject,
+                'minutes' => (int) $row->minutes,
+            ])
+            ->toArray();
+    }
+
+    private function allSubjectMinutes(int $userId): array
+    {
+        return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
+            ->where('daily_logs.user_id', $userId)
+            ->groupBy('subjects.id', 'subjects.name')
+            ->orderByDesc(DB::raw('SUM(study_sessions.minutes)'))
+            ->get([
+                'subjects.name as subject',
                 DB::raw('SUM(study_sessions.minutes) as minutes'),
             ])
             ->map(fn ($row) => [

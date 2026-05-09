@@ -281,7 +281,7 @@ components:
 
     DashboardStats:
       type: object
-      required: [thisWeekTotalMinutes, allTotalMinutes, thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, thisMonthSubjectMinutes, lastTouchedBySubject, dailyMinutes]
+      required: [thisWeekTotalMinutes, allTotalMinutes, thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, allSubjectMinutes, lastTouchedBySubject, dailyMinutes]
       properties:
         thisWeekTotalMinutes: { type: integer}
         currentStreak: { type: integer }
@@ -299,7 +299,7 @@ components:
             properties:
               subject: { type: string }
               minutes: { type: integer }
-        thisMonthSubjectMinutes:
+        allSubjectMinutes:
           type: array
           items:
             type: object
