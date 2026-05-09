@@ -19,7 +19,19 @@ class GetStopwatchUseCase
         $elapsed = $sw->elapsed_seconds;
 
         if ($sw->is_running && $sw->started_at !== null) {
-            $elapsed += (int) $sw->started_at->diffInSeconds(Carbon::now());
+            $diff = (int) $sw->started_at->diffInSeconds(Carbon::now());
+
+            // サーバー時刻ずれ等による異常値（24時間超）はリセットして0を返す
+            if ($diff > 86400) {
+                $sw->is_running      = false;
+                $sw->started_at      = null;
+                $sw->elapsed_seconds = 0;
+                $this->repository->save($sw);
+
+                return ['isRunning' => false, 'elapsedSeconds' => 0];
+            }
+
+            $elapsed += $diff;
         }
 
         return [
