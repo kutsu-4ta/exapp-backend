@@ -6,48 +6,26 @@ use App\Enums\AiAdviceMode;
 
 final class PromptBuilder
 {
-    /**
-     * System instruction (English). Profile fields are pre-translated by DeepLService.
-     */
     public function systemInstruction(AiAdviceMode $mode, AdviceContext $ctx): string
     {
+        // 共通の制約：直接メッセージのみを返す、日本語、簡潔さ
+        $base = "Respond directly with a concise Japanese message for the user. Do not use JSON or code blocks. ";
+
         return match ($mode) {
-            AiAdviceMode::ANALYSIS => <<<SYS
-You are a study strategy coach for a user (occupation: {$ctx->profile->occupation}, goal: {$ctx->profile->goal}).
-Analyze the provided study data quantitatively. Output a concrete allocation plan that specifies which time slot, subject, material, and duration to use for the remaining study time.
-Select materials only from the user's registered list provided in the user message. Do not suggest materials outside that list.
-No emotional language or encouragement. Data-driven reasoning only.
-All JSON field values must be written in Japanese.
-SYS,
+            AiAdviceMode::ANALYSIS =>
+                $base . "You are a data-driven study coach. Analyze the stats and provide a specific action plan (time, subject, material) for the remaining time. Tone: Professional and objective.",
 
-            AiAdviceMode::INSPIRATION => <<<SYS
-You are a mentor for a user (occupation: {$ctx->profile->occupation}, goal: {$ctx->profile->goal}).
-Affirm the significance of their study streak and accumulated results using academic and logical backing.
-Output each JSON field with a positive, forward-looking tone.
-All JSON field values must be written in Japanese.
-SYS,
+            AiAdviceMode::INSPIRATION =>
+                $base . "You are a supportive mentor. Validate their effort using academic/logical backing. Tone: Warm and encouraging.",
 
-            AiAdviceMode::ANALOGY => <<<SYS
-You are a study coach for a user (occupation: {$ctx->profile->occupation}).
-Map the user's recent study content to concepts from "{$ctx->profile->interests}" and output an intuitive analogy that promotes understanding.
-Use terminology and structures from "{$ctx->profile->interests}" as the vehicle for explanation.
-All JSON field values must be written in Japanese.
-SYS,
+            AiAdviceMode::ANALOGY =>
+                $base . "You are a creative tutor. Explain the last studied subject using an analogy related to the user's interests ({$ctx->profile->interests}).",
 
-            AiAdviceMode::WARNING => <<<SYS
-You are a strict, blunt exam prep coach.
-Coldly analyze the user's (occupation: {$ctx->profile->occupation}, goal: {$ctx->profile->goal}) study deficits and neglected weak subjects.
-Output an urgent allocation plan specifying which time slot, subject, material, and duration to act on immediately.
-Select materials only from the user's registered list provided in the user message. Do not suggest materials outside that list.
-No encouragement or softening. Be direct and unsparing.
-All JSON field values must be written in Japanese.
-SYS,
+            AiAdviceMode::WARNING =>
+                $base . "You are a strict exam prep coach. Coldly point out deficits and give an immediate, mandatory study task. Tone: Direct and unsparing.",
         };
     }
 
-    /**
-     * User prompt (data-embedded). Labels are in English; subject/material names stay in Japanese.
-     */
     public function userPrompt(AiAdviceMode $mode, AdviceContext $ctx): string
     {
         return match ($mode) {
@@ -58,55 +36,34 @@ SYS,
         };
     }
 
-    // ----------------------------------------------------------------
-
     private function analysisPrompt(AdviceContext $ctx): string
     {
-        $targetH  = round($ctx->profile->weeklyTargetMinutes / 60, 1);
-        $thisWeekH = round($ctx->thisWeekMinutes / 60, 1);
-        $remainH  = round($ctx->weeklyRemainingMinutes() / 60, 1);
-
-        return <<<PROMPT
-Weekly target: {$targetH}h | Actual: {$thisWeekH}h | Remaining: {$remainH}h
-Monthly by subject: {$this->formatSubjectMinutes($ctx->subjectMinutes)}
-Weak subjects: {$this->formatWeakSubjects($ctx->weakSubjects)}
-Available materials: {$this->formatMaterials($ctx->materials)}
-PROMPT;
+        return "Goal: {$ctx->profile->weeklyTargetMinutes}m | Actual: {$ctx->thisWeekMinutes}m | Remain: {$ctx->weeklyRemainingMinutes()}m\n" .
+            "Stats: {$this->formatSubjectMinutes($ctx->subjectMinutes)}\n" .
+            "Weak: {$this->formatWeakSubjects($ctx->weakSubjects)}\n" .
+            "Materials: {$this->formatMaterials($ctx->materials)}";
     }
 
     private function inspirationPrompt(AdviceContext $ctx): string
     {
-        $totalH = round($ctx->totalMonthMinutes / 60, 1);
-
-        return <<<PROMPT
-Streak: {$ctx->currentStreak} days | This month: {$ctx->studyDays} days / {$totalH}h | Last 7 days: {$ctx->last7DaysMinutes} min
-Last subject studied: {$ctx->lastSubject}
-Monthly breakdown: {$this->formatSubjectMinutes($ctx->subjectMinutes)}
-PROMPT;
+        return "Streak: {$ctx->currentStreak}d | Month: {$ctx->studyDays}d ({$ctx->totalMonthMinutes}m)\n" .
+            "Recent: {$ctx->lastSubject}\n" .
+            "Stats: {$this->formatSubjectMinutes($ctx->subjectMinutes)}";
     }
 
     private function analogyPrompt(AdviceContext $ctx): string
     {
-        return <<<PROMPT
-Occupation: {$ctx->profile->occupation} | Interests: {$ctx->profile->interests}
-Last subject studied: {$ctx->lastSubject}
-Strong areas: {$ctx->profile->strongAreas} | Weak areas: {$this->formatWeakSubjects($ctx->weakSubjects)}
-PROMPT;
+        return "Interest: {$ctx->profile->interests} | Occupation: {$ctx->profile->occupation}\n" .
+            "Last studied: {$ctx->lastSubject}\n" .
+            "Weakness: {$this->formatWeakSubjects($ctx->weakSubjects)}";
     }
 
     private function warningPrompt(AdviceContext $ctx): string
     {
-        $targetH   = round($ctx->profile->weeklyTargetMinutes / 60, 1);
-        $thisWeekH = round($ctx->thisWeekMinutes / 60, 1);
-        $lastSubject = $ctx->lastSubject ?: 'none';
-
-        return <<<PROMPT
-Weekly target: {$targetH}h | Actual: {$thisWeekH}h
-Last subject studied: {$lastSubject}
-Neglected weak subjects: {$this->formatWeakSubjects($ctx->weakSubjects)}
-Goal: {$ctx->profile->goal}
-Available materials: {$this->formatMaterials($ctx->materials)}
-PROMPT;
+        return "Deficit: " . ($ctx->profile->weeklyTargetMinutes - $ctx->thisWeekMinutes) . "m\n" .
+            "Last: {$ctx->lastSubject} | Goal: {$ctx->profile->goal}\n" .
+            "Neglected Weakness: {$this->formatWeakSubjects($ctx->weakSubjects)}\n" .
+            "Materials: {$this->formatMaterials($ctx->materials)}";
     }
 
     // ----------------------------------------------------------------

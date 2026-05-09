@@ -10,7 +10,6 @@ use App\Models\StudySession;
 use App\Models\UserProfile as UserProfileModel;
 use App\Services\AiAdvice\AdviceContext;
 use App\Services\AiAdvice\AdviceMessageFormatter;
-use App\Services\AiAdvice\AdviceResponseSchema;
 use App\Services\AiAdvice\PromptBuilder;
 use App\Services\AiAdvice\UserProfile;
 use App\Services\AiProfile\AiProfileBuilder;
@@ -45,13 +44,12 @@ class GetAiAdviceUseCase
 
         $systemInstruction = $this->promptBuilder->systemInstruction($mode, $context);
         $userPrompt        = $this->promptBuilder->userPrompt($mode, $context);
-        $schema            = AdviceResponseSchema::forMode($mode);
 
         $geminiToken = $dbProfile?->gemini_token;
 
-        $json = $this->gemini->generateJson($systemInstruction, $userPrompt, $schema, $geminiToken);
+        $text = $this->gemini->generateText($systemInstruction, $userPrompt, $geminiToken);
 
-        return $this->formatter->format($mode, $json);
+        return $this->formatter->format($mode, $text);
     }
 
     // ----------------------------------------------------------------

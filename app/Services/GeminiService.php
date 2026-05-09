@@ -21,6 +21,25 @@ class GeminiService
     }
 
     /**
+     * プレーンテキスト生成。スキーマなし・自由形式のテキストを返す。
+     */
+    public function generateText(
+        string  $systemInstruction,
+        string  $userPrompt,
+        ?string $apiKey = null
+    ): string {
+        $json = $this->callGemini(
+            contents: [
+                ['role' => 'user', 'parts' => [['text' => $userPrompt]]],
+            ],
+            apiKey: $apiKey,
+            systemInstruction: $systemInstruction,
+        );
+
+        return $this->extractText($json);
+    }
+
+    /**
      * JSON 強制出力でテキスト生成。responseMimeType=application/json + responseSchema を使用。
      * レスポンスは decode 済み配列で返す。
      */
