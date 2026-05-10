@@ -457,6 +457,28 @@ components:
           items: { $ref: '#/components/schemas/ExamMistakeNote' }
           description: '直近10件のミスメモ（note が入力されているもの）'
 
+    Flashcard:
+      type: object
+      required: [id, front, back]
+      properties:
+        id: { type: integer }
+        front:
+          type: object
+          required: [questionRef, solvedAt]
+          properties:
+            questionRef:  { type: string, description: '問題番号（例: 第12問）' }
+            subCategory:  { type: string, nullable: true, description: '小分類名' }
+            material:     { type: string, nullable: true, description: '教材名' }
+            solvedAt:     { type: string, format: date, description: '解答日' }
+        back:
+          type: object
+          required: [proficiency, failureTypes, isGoodQuestion]
+          properties:
+            note:           { type: string, nullable: true, description: '復習ノート（解法パターン・判断軸）' }
+            proficiency:    { $ref: '#/components/schemas/Proficiency' }
+            failureTypes:   { type: array, items: { $ref: '#/components/schemas/FailureType' } }
+            isGoodQuestion: { type: boolean }
+
 paths:
   # ── Stopwatch ─────────────────────────────────────────────────────────────────
 
@@ -612,6 +634,81 @@ paths:
           description: 未認証
         '404':
           description: 科目が見つからない
+
+  /flashcards:
+    get:
+      summary: フラッシュカード一覧を取得
+      tags: [Subjects]
+      description: |
+        苦手問題をフラッシュカード形式で返す。`subject` を指定した場合はその科目のみ、
+        省略した場合は全科目を返す。選択アルゴリズムは戦略パターンで差し替え可能。
+        現在はランダム抽出。
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string }
+          description: 科目名（省略時は全科目）
+        - name: count
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 10 }
+          description: 取得件数（省略時は10件）
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Flashcard' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /subjects/{subject}/flashcards:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+    get:
+      summary: 科目別フラッシュカード一覧を取得
+      tags: [Subjects]
+      description: |
+        指定科目の苦手問題をフラッシュカード形式で返す。
+        - **表（front）**: 問題番号・小分類・教材・解答日
+        - **裏（back）**: 復習ノート・習熟度・ミスタイプ・良問フラグ
+
+        `solved_at` 降順・`created_at` 降順・`id` 降順でソート。
+        カーソルページネーション（`after` に直前の末尾 ID を指定）に対応。
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+          description: 取得件数（省略時は全件）
+        - name: after
+          in: query
+          required: false
+          schema: { type: integer }
+          description: このIDより後のレコードを取得（カーソル）
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Flashcard' }
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ── Materials ────────────────────────────────────────────────────────────────
 

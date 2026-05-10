@@ -14,6 +14,7 @@ use App\Http\Controllers\MonthlySettingController;
 use App\Http\Controllers\PracticeController;
 use App\Http\Controllers\ProblemController;
 use App\Http\Controllers\StudySessionController;
+use App\Http\Controllers\FlashcardController;
 use App\Http\Controllers\StopwatchController;
 use App\Http\Controllers\SubCategoryController;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('subjects', [SubjectController::class, 'index']);
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
+    Route::get('subjects/{subject}/flashcards', [FlashcardController::class, 'index']);
+
+    // フラッシュカード（全科目 or 科目フィルタ）
+    Route::get('flashcards', [FlashcardController::class, 'indexAll']);
 
     // 小分類
     Route::get('sub-categories', [SubCategoryController::class, 'index']);

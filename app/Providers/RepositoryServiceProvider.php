@@ -7,7 +7,9 @@ use App\Domain\DailyLog\DailyLogRepositoryInterface;
 use App\Domain\ExamSession\ExamSessionRepositoryInterface;
 use App\Domain\Material\MaterialRepositoryInterface;
 use App\Domain\MonthlySetting\MonthlySettingRepositoryInterface;
+use App\Domain\Problem\FlashcardSelectionStrategyInterface;
 use App\Domain\Problem\ProblemRepositoryInterface;
+use App\Domain\Problem\RandomFlashcardSelectionStrategy;
 use App\Domain\StudySession\StudySessionRepositoryInterface;
 use App\Domain\SubCategory\SubCategoryRepositoryInterface;
 use App\Domain\Practice\PracticeSessionDraftRepositoryInterface;
@@ -40,6 +42,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(DailyLogRepositoryInterface::class, EloquentDailyLogRepository::class);
         $this->app->bind(StudySessionRepositoryInterface::class, EloquentStudySessionRepository::class);
         $this->app->bind(ProblemRepositoryInterface::class, EloquentProblemRepository::class);
+        $this->app->bind(FlashcardSelectionStrategyInterface::class, RandomFlashcardSelectionStrategy::class);
         $this->app->bind(ExamSessionRepositoryInterface::class, EloquentExamSessionRepository::class);
         $this->app->bind(StopwatchRepositoryInterface::class, EloquentStopwatchRepository::class);
         $this->app->bind(PracticeSessionRepositoryInterface::class, EloquentPracticeSessionRepository::class);
