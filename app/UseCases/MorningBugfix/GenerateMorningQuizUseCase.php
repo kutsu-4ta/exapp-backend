@@ -21,13 +21,13 @@ class GenerateMorningQuizUseCase
      * @param  Collection<Problem>  $problems
      * @return array  問題IDをキーとした quiz データ配列
      */
-    public function __invoke(Collection $problems, ?string $apiKey = null): array
+    public function __invoke(Collection $problems, ?string $apiKey = null, ?string $model = null): array
     {
         $systemInstruction = $this->buildSystemInstruction();
         $userPrompt        = $this->buildUserPrompt($problems);
         $responseSchema    = $this->buildResponseSchema();
 
-        $raw = $this->gemini->generateJson($systemInstruction, $userPrompt, $responseSchema, $apiKey);
+        $raw = $this->gemini->generateJson($systemInstruction, $userPrompt, $responseSchema, $apiKey, $model);
 
         $quizByProblemId = [];
         foreach ($raw as $item) {

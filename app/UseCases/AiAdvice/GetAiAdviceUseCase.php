@@ -31,9 +31,9 @@ class GetAiAdviceUseCase
     {
         $now       = Carbon::now();
         $dbProfile = UserProfileModel::where('user_id', $userId)->first();
+        $aiProfile = AiUserProfile::where('user_id', $userId)->first();
 
-        // AI向けキャッシュを取得。なければその場で生成する
-        $englishProfile = $this->resolveEnglishProfile($userId, $dbProfile);
+        $englishProfile = $this->resolveEnglishProfile($userId, $dbProfile, $aiProfile);
 
         $materials = $this->materialRepository
             ->findAll($userId)
@@ -46,8 +46,9 @@ class GetAiAdviceUseCase
         $userPrompt        = $this->promptBuilder->userPrompt($mode, $context);
 
         $geminiToken = $dbProfile?->gemini_token;
+        $geminiModel = $aiProfile?->gemini_model;
 
-        $text = $this->gemini->generateText($systemInstruction, $userPrompt, $geminiToken);
+        $text = $this->gemini->generateText($systemInstruction, $userPrompt, $geminiToken, $geminiModel);
 
         return $this->formatter->format($mode, $text);
     }
@@ -59,10 +60,10 @@ class GetAiAdviceUseCase
      * レコードがなければ AiProfileBuilder でその場生成してキャッシュする。
      * PromptBuilder は UserProfile DTO を受け取るので、normalized_prompt_json から再マッピングする。
      */
-    private function resolveEnglishProfile(int $userId, ?UserProfileModel $dbProfile): UserProfile
+    private function resolveEnglishProfile(int $userId, ?UserProfileModel $dbProfile, ?AiUserProfile $aiProfile = null): UserProfile
     {
         try {
-            $aiProfile = AiUserProfile::where('user_id', $userId)->first();
+            $aiProfile ??= AiUserProfile::where('user_id', $userId)->first();
 
             if ($aiProfile === null && $dbProfile !== null) {
                 $aiProfile = $this->profileBuilder->buildAndSave($dbProfile);

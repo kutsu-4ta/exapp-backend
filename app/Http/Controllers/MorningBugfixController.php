@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiUserProfile;
 use App\Models\UserProfile;
 use App\UseCases\MorningBugfix\GenerateMorningQuizUseCase;
 use App\UseCases\MorningBugfix\SelectMorningProblemsUseCase;
@@ -43,7 +44,8 @@ class MorningBugfixController extends Controller
         }
 
         $geminiToken = UserProfile::where('user_id', $user->id)->value('gemini_token');
-        $quizByProblemId = ($this->generateQuiz)($problems, $geminiToken ?: null);
+        $geminiModel = AiUserProfile::where('user_id', $user->id)->value('gemini_model');
+        $quizByProblemId = ($this->generateQuiz)($problems, $geminiToken ?: null, $geminiModel ?: null);
 
         $questions = $problems->map(function ($problem) use ($quizByProblemId) {
             $quiz = $quizByProblemId[$problem->id] ?? null;

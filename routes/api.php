@@ -3,6 +3,7 @@
 use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\GeminiContextController;
+use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\AuthController;
@@ -111,6 +112,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Geminiコピー用コンテキスト
     Route::get('gemini/context', [GeminiContextController::class, 'show']);
+
+    // Gemini設定（使用モデル）
+    Route::get('gemini/settings', [GeminiSettingController::class, 'show']);
+    Route::put('gemini/settings', [GeminiSettingController::class, 'update']);
 
     // 朝の定義ミス復習
     Route::get('morning-bugfix', [MorningBugfixController::class, 'show']);

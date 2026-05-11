@@ -7,6 +7,7 @@ use App\Domain\SubCategory\SubCategoryRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Enums\FailureType;
 use App\Enums\Proficiency;
+use App\Models\AiUserProfile;
 use App\Services\AiAdvice\UserProfile;
 use App\Models\UserProfile as UserProfileModel;
 use App\Services\GeminiService;
@@ -69,10 +70,10 @@ PROMPT;
         $mimeType = $this->detectMimeType($image);
         $binary = file_get_contents($image->getRealPath());
 
-        $dbProfile = UserProfileModel::where('user_id', $userId)->first();
         $geminiToken = $dbProfile?->gemini_token;
+        $geminiModel = AiUserProfile::where('user_id', $userId)->value('gemini_model');
 
-        $json = $this->gemini->analyzeImage($binary, $mimeType->value, $prompt, [], $geminiToken);
+        $json = $this->gemini->analyzeImage($binary, $mimeType->value, $prompt, [], $geminiToken, $geminiModel);
 
         $validFailureTypes = $this->filterFailureTypes($json['failure_types'] ?? []);
 

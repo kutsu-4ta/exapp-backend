@@ -17,6 +17,7 @@ class AiUserProfile extends Model
         'study_style_json',
         'normalized_prompt_json',
         'translation_version',
+        'gemini_model',
     ];
 
     protected function casts(): array

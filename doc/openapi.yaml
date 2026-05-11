@@ -2042,6 +2042,69 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /gemini/settings:
+    get:
+      summary: Gemini設定を取得
+      tags: [AI]
+      description: ユーザーが設定した使用モデル名を返す。未設定の場合は `geminiModel` が `null`。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [geminiModel]
+                properties:
+                  geminiModel:
+                    type: string
+                    nullable: true
+                    description: '使用モデル名（例: gemini-2.5-flash, gemini-2.5-pro）'
+              example:
+                geminiModel: 'gemini-2.5-flash'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      summary: Gemini設定を更新
+      tags: [AI]
+      description: |
+        使用モデル名を保存する。`ai_user_profiles` に upsert される。
+        設定後の Gemini 呼び出し（AIアドバイス・画像解析・朝の復習）すべてにこのモデルが使用される。
+        環境変数 `GEMINI_MODEL` がデフォルトとして使用され、この設定で上書きされる。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geminiModel]
+              properties:
+                geminiModel:
+                  type: string
+                  maxLength: 100
+                  description: '使用モデル名'
+            example:
+              geminiModel: 'gemini-2.5-pro'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [geminiModel]
+                properties:
+                  geminiModel:
+                    type: string
+                    nullable: true
+                    description: '保存されたモデル名'
+              example:
+                geminiModel: 'gemini-2.5-pro'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
   # ── Morning Bugfix ───────────────────────────────────────────────────────────
 
   /morning-bugfix:

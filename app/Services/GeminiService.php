@@ -27,7 +27,8 @@ class GeminiService
     public function generateText(
         string  $systemInstruction,
         string  $userPrompt,
-        ?string $apiKey = null
+        ?string $apiKey = null,
+        ?string $model = null
     ): string {
         $json = $this->callGemini(
             contents: [
@@ -35,6 +36,7 @@ class GeminiService
             ],
             apiKey: $apiKey,
             systemInstruction: $systemInstruction,
+            model: $model,
         );
 
         return $this->extractText($json);
@@ -48,7 +50,8 @@ class GeminiService
         string  $systemInstruction,
         string  $userPrompt,
         array   $responseSchema,
-        ?string $apiKey = null
+        ?string $apiKey = null,
+        ?string $model = null
     ): array {
         $json = $this->callGemini(
             contents: [
@@ -60,6 +63,7 @@ class GeminiService
                 'responseMimeType' => 'application/json',
                 'responseSchema'   => $responseSchema,
             ],
+            model: $model,
         );
 
         $text = $this->extractText($json);
@@ -75,7 +79,8 @@ class GeminiService
         string  $mimeType,
         string  $prompt,
         array   $responseSchema = [],
-        ?string $apiKey = null
+        ?string $apiKey = null,
+        ?string $model = null
     ): array {
         $generationConfig = ['responseMimeType' => 'application/json'];
         if (!empty($responseSchema)) {
@@ -98,6 +103,7 @@ class GeminiService
             ],
             apiKey: $apiKey,
             generationConfig: $generationConfig,
+            model: $model,
         );
 
         $text = $this->extractText($json);
@@ -111,18 +117,20 @@ class GeminiService
      * Gemini API 共通呼び出し。
      *
      * @param  array       $contents          Gemini contents 配列
-     * @param  string|null $apiKey            上書きキー
+     * @param  string|null $apiKey            上書きキー（nullのとき環境変数デフォルト）
      * @param  string|null $systemInstruction systemInstruction テキスト
      * @param  array       $generationConfig  generationConfig オブジェクト
+     * @param  string|null $model             使用モデル（nullのとき環境変数デフォルト）
      */
     private function callGemini(
         array   $contents,
         ?string $apiKey = null,
         ?string $systemInstruction = null,
         array   $generationConfig = [],
+        ?string $model = null,
     ): array {
         $key   = $apiKey ?: $this->defaultApiKey;
-        $model = $this->defaultModel;
+        $model = $model ?: $this->defaultModel;
 
         $body = ['contents' => $contents];
 
