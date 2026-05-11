@@ -402,6 +402,42 @@ components:
           items:
             $ref: '#/components/schemas/GeminiContextSubject'
 
+    MorningQuizItem:
+      type: object
+      required: [id, subject, problem_context, quiz]
+      properties:
+        id:           { type: integer }
+        subject:      { type: string }
+        sub_category: { type: string, nullable: true }
+        problem_context:
+          type: object
+          properties:
+            original_ref: { type: string, nullable: true }
+            user_memo:    { type: string, nullable: true }
+        quiz:
+          type: object
+          nullable: true
+          properties:
+            question:      { type: string }
+            options:       { type: array, items: { type: string } }
+            correct_index: { type: integer, minimum: 0, maximum: 3 }
+            explanation:   { type: string }
+        last_touched_at: { type: string, format: date, nullable: true }
+
+    MorningBugfixSession:
+      type: object
+      required: [session_id, meta, questions]
+      properties:
+        session_id: { type: string, example: 'morning_bugfix_20260512' }
+        meta:
+          type: object
+          properties:
+            total_questions: { type: integer }
+            strategy:        { type: string, example: 'definition_focused' }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/MorningQuizItem' }
+
     Error:
       type: object
       required: [message]
@@ -1909,6 +1945,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Morning Bugfix ───────────────────────────────────────────────────────────
+
+  /morning-bugfix:
+    get:
+      summary: 朝の定義ミス復習セッションを取得
+      tags: [AI]
+      description: |
+        昨日触れた「定義ミス」の苦手問題を優先的に抽出し、Geminiで定義理解クイズを生成して返す。
+
+        **問題選出フォールバック（合計5問）:**
+        1. `last_touched_at == 昨日` かつ `failure_types` に `定義ミス` を含む（RANDOM）
+        2. 直近7日以内の定義ミス（昨日を除く）で補填（RANDOM）
+        3. それでも不足する場合、全期間の定義ミスを習熟度の低い順（×→△→○）で補填
+
+        `date` パラメータを指定すると、その日を「今日」とみなして昨日を計算する（テスト用）。
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: '基準日（省略時: サーバー今日）'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+        '401':
+          description: 未認証
 
   # ── AI Advice ────────────────────────────────────────────────────────────────
 
