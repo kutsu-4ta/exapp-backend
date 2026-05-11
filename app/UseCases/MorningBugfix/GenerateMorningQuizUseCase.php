@@ -8,6 +8,11 @@ use Illuminate\Support\Collection;
 
 class GenerateMorningQuizUseCase
 {
+    // 将来的に設定ファイルや引数から変更できるよう、定数またはプロパティに切り出し
+    private const EXAM_NAME = '中小企業診断士試験';
+    private const FOCUS_THEME = '定義理解';
+    private const OPTION_COUNT = 4;
+
     public function __construct(
         private readonly GeminiService $gemini,
     ) {}
@@ -24,7 +29,6 @@ class GenerateMorningQuizUseCase
 
         $raw = $this->gemini->generateJson($systemInstruction, $userPrompt, $responseSchema, $apiKey);
 
-        // problem_id をキーに変換して返す
         $quizByProblemId = [];
         foreach ($raw as $item) {
             $id = (int) ($item['problem_id'] ?? 0);
@@ -41,24 +45,27 @@ class GenerateMorningQuizUseCase
         return $quizByProblemId;
     }
 
-    // ----------------------------------------------------------------
-
     private function buildSystemInstruction(): string
     {
-        return <<<'TEXT'
-あなたは中小企業診断士試験の「定義理解」特化型問題生成AIです。
-ユーザーが実際に間違えた苦手問題データを基に、定義の本質を問う4択選択問題を生成します。
+        $exam  = self::EXAM_NAME;
+        $theme = self::FOCUS_THEME;
+        $count = self::OPTION_COUNT;
+
+        return <<<TEXT
+あなたは{$exam}の「{$theme}」特化型問題生成AIです。
+ユーザーが実際に間違えた苦手問題データを基に、定義の本質を問う{$count}択選択問題を生成します。
 
 【必須ルール】
-1. 選択肢は、単なる正誤ではなく、「使用貸借」「賃貸借」など混同しやすい類似定義をあえて混ぜて、ユーザーの論理的解釈力をテストしてください。消去法ではなく「定義の理解」を強制する良問にしてください。
-2. explanationには、user_memoにある定義・キーワードを必ず組み込み、正しい定義を明示してください（ハルシネーション防止）。
+1. 選択肢は、単なる正誤ではなく、混同しやすい類似定義をあえて混ぜて、ユーザーの論理的解釈力をテストしてください。消去法ではなく「定義の理解」を強制する良問にしてください。
+2. explanationには、user_memoにある定義・キーワード、公式を必ず組み込み、正しい定義を明示してください（ハルシネーション防止）。
 3. すべての文章は日本語で生成してください。
-4. correct_indexは0〜3の整数で返してください。
+4. correct_indexは0〜{$count}の範囲内の整数で返してください（0始まり）。
 TEXT;
     }
 
     private function buildUserPrompt(Collection $problems): string
     {
+        $count = self::OPTION_COUNT;
         $items = $problems->map(fn (Problem $p) => [
             'problem_id'   => $p->id,
             'subject'      => $p->subject?->name ?? '',
@@ -67,15 +74,15 @@ TEXT;
             'user_memo'    => $p->note,
         ])->values()->toArray();
 
-        $json  = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $count = $problems->count();
+        $json      = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $itemCount = $problems->count();
 
         return <<<TEXT
-以下の {$count} 件の苦手問題（定義ミス）に対して、それぞれ定義理解を問う4択問題を生成してください。
+以下の {$itemCount} 件の苦手問題に対して、それぞれ定義理解を問う{$count}択問題を生成してください。
 
 {$json}
 
-各問題について problem_id, question, options（4要素の配列）, correct_index（0〜3）, explanation を返してください。
+各問題について problem_id, question, options（{$count}要素の配列）, correct_index, explanation を返してください。
 TEXT;
     }
 
