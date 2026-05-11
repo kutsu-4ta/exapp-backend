@@ -474,6 +474,11 @@ components:
             explanation:   { type: string }
         last_touched_at: { type: string, format: date, nullable: true }
 
+    TouchedOrder:
+      type: string
+      enum: [recent, old]
+      description: 'recent: 最近触れた問題を優先 / old: 長く触れていない問題を優先'
+
     MorningBugfixSession:
       type: object
       required: [session_id, meta, questions]
@@ -483,7 +488,10 @@ components:
           type: object
           properties:
             total_questions: { type: integer }
-            strategy:        { type: string, example: 'definition_focused' }
+            strategy:
+              type: string
+              enum: [definition_focused, flash_bugfix]
+              description: 'definition_focused: Morning Bugfix / flash_bugfix: Flash Bugfix（subjectPage発）'
         questions:
           type: array
           items: { $ref: '#/components/schemas/MorningQuizItem' }
@@ -2109,31 +2117,107 @@ paths:
 
   /morning-bugfix:
     get:
-      summary: 朝の定義ミス復習セッションを取得
+      summary: 定義ミス復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
       tags: [AI]
       description: |
-        昨日触れた「定義ミス」の苦手問題を優先的に抽出し、Geminiで定義理解クイズを生成して返す。
+        苦手問題から定義理解クイズを生成して返す汎用エンドポイント。
+        新パラメータ（`failureType`, `subCategoryId`, `touchedOrder`, `proficiency`, `limit`）を
+        **1つも指定しない**場合は Morning Bugfix モードとして動作し、既存の挙動を維持する。
+        いずれか1つでも指定した場合は Flash Bugfix モード（柔軟フィルタ）として動作する。
 
-        **問題選出フォールバック（合計5問）:**
-        1. `last_touched_at == 昨日` かつ `failure_types` に `定義ミス` を含む（RANDOM）
+        ### Morning Bugfix モード（パラメータ未指定）
+        デフォルト: `failureType=定義ミス`, `limit=5`
+
+        **3段階フォールバック:**
+        1. `last_touched_at == 昨日` かつ `定義ミス`（RANDOM）
         2. 直近7日以内の定義ミス（昨日を除く）で補填（RANDOM）
-        3. それでも不足する場合、全期間の定義ミスを習熟度の低い順（×→△→○）で補填
+        3. 全期間の定義ミスを習熟度低い順（×→△→○）で補填
 
-        `date` パラメータを指定すると、その日を「今日」とみなして昨日を計算する（テスト用）。
+        `date` パラメータを指定するとその日を「今日」とみなす（テスト用）。
+
+        ### Flash Bugfix モード（任意パラメータ指定）
+        指定した条件で問題を抽出し、不足時は段階的に条件を緩めて補填する。
+
+        **フォールバック順:**
+        1. `failureType` + `subCategoryId`
+        2. `failureType` のみ（`subCategoryId` を緩める）
+        3. `subCategoryId` のみ（`failureType` を緩める）
+        4. 全問題（習熟度低い順）
+
+        **例:** `?subCategoryId=12&failureType=定義ミス&touchedOrder=old&limit=10`
       parameters:
         - name: date
           in: query
           required: false
           schema: { type: string, format: date }
-          description: '基準日（省略時: サーバー今日）'
+          description: '基準日（Morning Bugfix モード専用・省略時: サーバー今日）'
+        - name: failureType
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/FailureType' }
+          description: 'ミス種別フィルタ。未指定なら全ミス種別対象（Morning Bugfix デフォルト: 定義ミス）'
+          example: '定義ミス'
+        - name: subCategoryId
+          in: query
+          required: false
+          schema: { type: integer }
+          description: '小分類ID。未指定なら全小分類対象'
+          example: 12
+        - name: touchedOrder
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/TouchedOrder' }
+          description: '最後に触れた日からの近さ。未指定なら RANDOM'
+          example: 'old'
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 5, minimum: 1, maximum: 10 }
+          description: '取得問題数（max: 10）'
+          example: 10
+        - name: proficiency
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Proficiency' }
+          description: '習熟度フィルタ（複数選択可）。未指定なら △/× のみ'
+          example: ['△', '×']
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+              examples:
+                morning_bugfix:
+                  summary: Morning Bugfix（パラメータ未指定）
+                  value:
+                    session_id: 'morning_bugfix_20260512'
+                    meta: { total_questions: 3, strategy: 'definition_focused' }
+                    questions:
+                      - id: 42
+                        subject: '企業経営理論'
+                        sub_category: '経営戦略論'
+                        problem_context: { original_ref: '2023年 第12問', user_memo: 'PPM の定義' }
+                        quiz:
+                          question: '次のうちPPMにおける「花形」の定義として正しいものはどれか？'
+                          options: ['高シェア・高成長', '低シェア・高成長', '高シェア・低成長', '低シェア・低成長']
+                          correct_index: 0
+                          explanation: '花形は市場成長率・市場シェアともに高い事業...'
+                        last_touched_at: '2026-05-11'
+                flash_bugfix:
+                  summary: Flash Bugfix（subjectPage から）
+                  value:
+                    session_id: 'flash_bugfix_20260512'
+                    meta: { total_questions: 5, strategy: 'flash_bugfix' }
+                    questions: []
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '429':
           $ref: '#/components/responses/GeminiQuotaExceeded'
         '503':

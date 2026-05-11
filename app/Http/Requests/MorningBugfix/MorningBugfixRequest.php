@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Requests\MorningBugfix;
+
+use App\Enums\FailureType;
+use App\Enums\Proficiency;
+use App\UseCases\MorningBugfix\BugfixFilter;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class MorningBugfixRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        $failureTypes  = array_column(FailureType::cases(), 'value');
+        $proficiencies = array_column(Proficiency::cases(), 'value');
+
+        return [
+            'date'          => ['sometimes', 'nullable', 'date'],
+            'failureType'   => ['sometimes', 'nullable', Rule::in($failureTypes)],
+            'subCategoryId' => ['sometimes', 'nullable', 'integer', 'exists:sub_categories,id'],
+            'touchedOrder'  => ['sometimes', 'nullable', Rule::in(['recent', 'old'])],
+            'limit'         => ['sometimes', 'integer', 'min:1', 'max:' . BugfixFilter::MAX_LIMIT],
+            'proficiency'   => ['sometimes', 'array'],
+            'proficiency.*' => ['string', Rule::in($proficiencies)],
+        ];
+    }
+}

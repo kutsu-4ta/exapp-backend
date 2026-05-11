@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\MorningBugfix\MorningBugfixRequest;
 use App\Models\AiUserProfile;
 use App\Models\UserProfile;
+use App\UseCases\MorningBugfix\BugfixFilter;
 use App\UseCases\MorningBugfix\GenerateMorningQuizUseCase;
 use App\UseCases\MorningBugfix\SelectMorningProblemsUseCase;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class MorningBugfixController extends Controller
@@ -18,7 +19,7 @@ class MorningBugfixController extends Controller
         private readonly GenerateMorningQuizUseCase   $generateQuiz,
     ) {}
 
-    public function show(Request $request): JsonResponse
+    public function show(MorningBugfixRequest $request): JsonResponse
     {
         $user = $request->user() ?? auth('sanctum')->user();
 
@@ -26,25 +27,45 @@ class MorningBugfixController extends Controller
             throw new AuthenticationException('ユーザー認証に失敗しました。');
         }
 
-        $date = $request->filled('date')
-            ? Carbon::parse($request->input('date'))
-            : Carbon::today();
+        // 新パラメータが1つでも指定されていれば Flash Bugfix モード
+        $isMorningMode = !$request->hasAny(['failureType', 'subCategoryId', 'touchedOrder', 'proficiency', 'limit']);
 
-        $problems = ($this->selectProblems)($user->id, $date);
+        if ($isMorningMode) {
+            $date      = $request->filled('date')
+                ? Carbon::parse($request->input('date'))
+                : Carbon::today();
+            $filter    = BugfixFilter::morningDefault($date);
+            $sessionId = 'morning_bugfix_' . $date->format('Ymd');
+            $strategy  = 'definition_focused';
+        } else {
+            $filter = new BugfixFilter(
+                failureType:   $request->input('failureType'),
+                subCategoryId: $request->integer('subCategoryId') ?: null,
+                touchedOrder:  $request->input('touchedOrder'),
+                limit:         $request->integer('limit', BugfixFilter::DEFAULT_LIMIT),
+                proficiencies: $request->input('proficiency', BugfixFilter::defaultProficiencies()),
+                morningMode:   false,
+                date:          null,
+            );
+            $sessionId = 'flash_bugfix_' . Carbon::today()->format('Ymd');
+            $strategy  = 'flash_bugfix';
+        }
+
+        $problems = ($this->selectProblems)($user->id, $filter);
 
         if ($problems->isEmpty()) {
             return response()->json([
-                'session_id' => 'morning_bugfix_' . $date->format('Ymd'),
+                'session_id' => $sessionId,
                 'meta'       => [
                     'total_questions' => 0,
-                    'strategy'        => 'definition_focused',
+                    'strategy'        => $strategy,
                 ],
                 'questions'  => [],
             ]);
         }
 
-        $geminiToken = UserProfile::where('user_id', $user->id)->value('gemini_token');
-        $geminiModel = AiUserProfile::where('user_id', $user->id)->value('gemini_model');
+        $geminiToken     = UserProfile::where('user_id', $user->id)->value('gemini_token');
+        $geminiModel     = AiUserProfile::where('user_id', $user->id)->value('gemini_model');
         $quizByProblemId = ($this->generateQuiz)($problems, $geminiToken ?: null, $geminiModel ?: null);
 
         $questions = $problems->map(function ($problem) use ($quizByProblemId) {
@@ -64,10 +85,10 @@ class MorningBugfixController extends Controller
         })->values()->toArray();
 
         return response()->json([
-            'session_id' => 'morning_bugfix_' . $date->format('Ymd'),
+            'session_id' => $sessionId,
             'meta'       => [
                 'total_questions' => count($questions),
-                'strategy'        => 'definition_focused',
+                'strategy'        => $strategy,
             ],
             'questions'  => $questions,
         ]);

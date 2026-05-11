@@ -2,7 +2,6 @@
 
 namespace App\UseCases\MorningBugfix;
 
-use App\Enums\FailureType;
 use App\Enums\Proficiency;
 use App\Models\Problem;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,62 +10,163 @@ use Illuminate\Support\Collection;
 
 class SelectMorningProblemsUseCase
 {
-    private const LIMIT = 5;
-
-    public function __invoke(int $userId, ?Carbon $date = null): Collection
+    public function __invoke(int $userId, BugfixFilter $filter): Collection
     {
-        $date      = $date ?? Carbon::today();
-        $yesterday = $date->copy()->subDay()->toDateString();
+        return $filter->morningMode
+            ? $this->selectMorningMode($userId, $filter)
+            : $this->selectFlexMode($userId, $filter);
+    }
+
+    // ── Morning Bugfix: 3段階フォールバック（昨日→7日→全期間）─────────────────
+
+    private function selectMorningMode(int $userId, BugfixFilter $filter): Collection
+    {
+        $date         = $filter->date ?? Carbon::today();
+        $yesterday    = $date->copy()->subDay()->toDateString();
         $sevenDaysAgo = $date->copy()->subDays(7)->toDateString();
+        $limit        = $filter->limit;
 
         $selected = collect();
 
-        // Tier 1: 昨日に触れた定義ミス
-        $tier1 = $this->baseQuery($userId)
+        // Tier 1: 昨日に触れた
+        $tier1 = $this->morningBase($userId, $filter)
             ->whereDate('last_touched_at', $yesterday)
             ->inRandomOrder()
-            ->limit(self::LIMIT)
+            ->limit($limit)
             ->get();
-
         $selected = $selected->concat($tier1);
 
-        if ($selected->count() >= self::LIMIT) {
-            return $selected->take(self::LIMIT);
+        if ($selected->count() >= $limit) {
+            return $selected->take($limit);
         }
 
-        // Tier 2: 直近7日以内の定義ミス（昨日を除く、取得済みを除外）
-        $tier2 = $this->baseQuery($userId)
+        // Tier 2: 直近7日以内（昨日を除く）
+        $tier2 = $this->morningBase($userId, $filter)
             ->whereDate('last_touched_at', '>=', $sevenDaysAgo)
             ->whereDate('last_touched_at', '<', $yesterday)
             ->whereNotIn('id', $selected->pluck('id'))
             ->inRandomOrder()
-            ->limit(self::LIMIT - $selected->count())
+            ->limit($limit - $selected->count())
             ->get();
-
         $selected = $selected->concat($tier2);
 
-        if ($selected->count() >= self::LIMIT) {
-            return $selected->take(self::LIMIT);
+        if ($selected->count() >= $limit) {
+            return $selected->take($limit);
         }
 
-        // Tier 3: 全期間の定義ミス（習熟度の低い順＝×>△>○、取得済みを除外）
+        // Tier 3: 全期間（習熟度の低い順 ×>△>○）
         $incorrect = Proficiency::Incorrect->value;
         $partial   = Proficiency::Partial->value;
 
-        $tier3 = $this->baseQuery($userId)
+        $tier3 = $this->morningBase($userId, $filter)
             ->whereNotIn('id', $selected->pluck('id'))
-            ->orderByRaw("CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END", [$incorrect, $partial])
+            ->orderByRaw('CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [$incorrect, $partial])
             ->orderByRaw('RANDOM()')
-            ->limit(self::LIMIT - $selected->count())
+            ->limit($limit - $selected->count())
             ->get();
 
-        return $selected->concat($tier3)->take(self::LIMIT);
+        return $selected->concat($tier3)->take($limit);
     }
 
-    private function baseQuery(int $userId): Builder
+    private function morningBase(int $userId, BugfixFilter $filter): Builder
     {
-        return Problem::where('user_id', $userId)
-            ->whereJsonContains('failure_types', FailureType::MissingDefinition->value)
+        $query = Problem::where('user_id', $userId)
             ->with(['subject', 'subCategory']);
+
+        if ($filter->failureType !== null) {
+            $query->whereJsonContains('failure_types', $filter->failureType);
+        }
+
+        return $query;
+    }
+
+    // ── Flash Bugfix: 汎用フォールバック（条件を段階的に緩める）─────────────────
+
+    private function selectFlexMode(int $userId, BugfixFilter $filter): Collection
+    {
+        $limit    = $filter->limit;
+        $selected = collect();
+
+        // Tier 1: failureType + subCategoryId（フル条件）
+        $tier1 = $this->flexQuery($userId, $filter, useFailureType: true, useSubCategory: true)
+            ->whereNotIn('id', $selected->pluck('id'))
+            ->limit($limit - $selected->count())
+            ->get();
+        $selected = $selected->concat($tier1);
+
+        if ($selected->count() >= $limit) {
+            return $selected->take($limit);
+        }
+
+        // Tier 2: failureType のみ（subCategoryId を緩める）
+        if ($filter->subCategoryId !== null) {
+            $tier2 = $this->flexQuery($userId, $filter, useFailureType: true, useSubCategory: false)
+                ->whereNotIn('id', $selected->pluck('id'))
+                ->limit($limit - $selected->count())
+                ->get();
+            $selected = $selected->concat($tier2);
+
+            if ($selected->count() >= $limit) {
+                return $selected->take($limit);
+            }
+        }
+
+        // Tier 3: subCategoryId のみ（failureType を緩める）
+        if ($filter->failureType !== null && $filter->subCategoryId !== null) {
+            $tier3 = $this->flexQuery($userId, $filter, useFailureType: false, useSubCategory: true)
+                ->whereNotIn('id', $selected->pluck('id'))
+                ->limit($limit - $selected->count())
+                ->get();
+            $selected = $selected->concat($tier3);
+
+            if ($selected->count() >= $limit) {
+                return $selected->take($limit);
+            }
+        }
+
+        // Tier 4: 全問題（proficiency フィルターも解除、習熟度低い順）
+        $incorrect = Proficiency::Incorrect->value;
+        $partial   = Proficiency::Partial->value;
+
+        $tier4 = Problem::where('user_id', $userId)
+            ->with(['subject', 'subCategory'])
+            ->whereNotIn('id', $selected->pluck('id'))
+            ->orderByRaw('CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [$incorrect, $partial])
+            ->orderByRaw('RANDOM()')
+            ->limit($limit - $selected->count())
+            ->get();
+
+        return $selected->concat($tier4)->take($limit);
+    }
+
+    private function flexQuery(int $userId, BugfixFilter $filter, bool $useFailureType, bool $useSubCategory): Builder
+    {
+        $query = Problem::where('user_id', $userId)
+            ->with(['subject', 'subCategory']);
+
+        if ($useFailureType && $filter->failureType !== null) {
+            $query->whereJsonContains('failure_types', $filter->failureType);
+        }
+
+        if ($useSubCategory && $filter->subCategoryId !== null) {
+            $query->where('sub_category_id', $filter->subCategoryId);
+        }
+
+        if (!empty($filter->proficiencies)) {
+            $query->whereIn('proficiency', $filter->proficiencies);
+        }
+
+        $this->applyTouchedOrder($query, $filter->touchedOrder);
+
+        return $query;
+    }
+
+    private function applyTouchedOrder(Builder $query, ?string $order): void
+    {
+        match ($order) {
+            'recent' => $query->orderByRaw('last_touched_at DESC NULLS LAST'),
+            'old'    => $query->orderByRaw('last_touched_at ASC NULLS FIRST'),
+            default  => $query->inRandomOrder(),
+        };
     }
 }
