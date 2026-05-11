@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\FlashcardResource;
+use App\UseCases\Problem\SelectReviewProblemsUseCase;
 use App\UseCases\Subject\GetSubjectMonthlyGoalUseCase;
 use App\UseCases\Subject\GetSubjectSettingsUseCase;
 use App\UseCases\Subject\UpsertSubjectMonthlyGoalUseCase;
@@ -12,10 +14,11 @@ use Illuminate\Http\Request;
 class SubjectDetailController extends Controller
 {
     public function __construct(
-        private readonly GetSubjectSettingsUseCase     $getSettings,
-        private readonly UpsertSubjectSettingsUseCase  $upsertSettings,
-        private readonly GetSubjectMonthlyGoalUseCase  $getMonthlyGoal,
+        private readonly GetSubjectSettingsUseCase       $getSettings,
+        private readonly UpsertSubjectSettingsUseCase    $upsertSettings,
+        private readonly GetSubjectMonthlyGoalUseCase    $getMonthlyGoal,
         private readonly UpsertSubjectMonthlyGoalUseCase $upsertMonthlyGoal,
+        private readonly SelectReviewProblemsUseCase     $selectReviewProblems,
     ) {}
 
     public function showSettings(Request $request, string $subject): JsonResponse
@@ -48,5 +51,13 @@ class SubjectDetailController extends Controller
 
         $user = $request->user() ?? auth('sanctum')->user();
         return response()->json(($this->upsertMonthlyGoal)($user->id, urldecode($subject), $year, $month, $validated['goal'] ?? null));
+    }
+
+    public function reviewProblems(Request $request, string $subject): JsonResponse
+    {
+        $user     = $request->user() ?? auth('sanctum')->user();
+        $problems = ($this->selectReviewProblems)($user->id, urldecode($subject));
+
+        return response()->json(FlashcardResource::collection($problems));
     }
 }

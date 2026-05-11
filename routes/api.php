@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('subjects/{subject}/settings', [SubjectDetailController::class, 'upsertSettings']);
     Route::get('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'showMonthlyGoal']);
     Route::put('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'upsertMonthlyGoal']);
+    Route::get('subjects/{subject}/review-problems', [SubjectDetailController::class, 'reviewProblems']);
 
     // フラッシュカード（全科目 or 科目フィルタ）
     Route::get('flashcards', [FlashcardController::class, 'indexAll']);
@@ -88,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('problems/{id}', [ProblemController::class, 'show']);
     Route::put('problems/{id}', [ProblemController::class, 'update']);
     Route::delete('problems/{id}', [ProblemController::class, 'destroy']);
+    Route::post('problems/{id}/touch', [ProblemController::class, 'touch']);
 
     // ダッシュボード
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);

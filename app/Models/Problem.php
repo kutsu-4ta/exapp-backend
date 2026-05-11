@@ -19,6 +19,7 @@ class Problem extends Model
         'failure_types',
         'is_good_question',
         'solved_at',
+        'last_touched_at',
     ];
 
     protected function casts(): array
@@ -30,7 +31,8 @@ class Problem extends Model
             'proficiency' => Proficiency::class,
             'failure_types' => 'array',
             'is_good_question' => 'boolean',
-            'solved_at' => 'date',
+            'solved_at'        => 'date',
+            'last_touched_at'  => 'date',
         ];
     }
 

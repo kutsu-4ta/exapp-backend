@@ -11,7 +11,8 @@ class FlashcardResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id'            => $this->id,
+            'lastTouchedAt' => $this->last_touched_at?->toDateString(),
             'front' => [
                 'questionRef' => $this->question_ref,
                 'subCategory' => $this->subCategory?->name,
