@@ -17,6 +17,7 @@ use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\FlashcardController;
 use App\Http\Controllers\StopwatchController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\SubjectDetailController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
     Route::get('subjects/{subject}/flashcards', [FlashcardController::class, 'index']);
+    Route::get('subjects/{subject}/settings', [SubjectDetailController::class, 'showSettings']);
+    Route::put('subjects/{subject}/settings', [SubjectDetailController::class, 'upsertSettings']);
+    Route::get('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'showMonthlyGoal']);
+    Route::put('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'upsertMonthlyGoal']);
 
     // フラッシュカード（全科目 or 科目フィルタ）
     Route::get('flashcards', [FlashcardController::class, 'indexAll']);

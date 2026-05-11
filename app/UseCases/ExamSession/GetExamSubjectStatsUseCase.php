@@ -12,11 +12,11 @@ class GetExamSubjectStatsUseCase
         private readonly EloquentExamSessionRepository $repository,
     ) {}
 
-    public function __invoke(int $userId, string $subjectName): array
+    public function __invoke(int $userId, string $subjectName, ?int $year = null, ?int $month = null): array
     {
         $subject = Subject::where('user_id', $userId)->where('name', $subjectName)->firstOrFail();
 
-        $sessions = $this->repository->findCompletedBySubject($userId, $subject->id);
+        $sessions = $this->repository->findCompletedBySubject($userId, $subject->id, $year, $month);
 
         $sessionCount = $sessions->count();
 

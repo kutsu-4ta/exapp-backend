@@ -173,7 +173,9 @@ class ExamSessionController extends Controller
             throw new AuthenticationException('ユーザー認証に失敗しました。');
         }
 
-        $stats = ($this->subjectStatsUseCase)($user->id, urldecode($subject));
+        $year  = $request->integer('year') ?: null;
+        $month = $request->integer('month') ?: null;
+        $stats = ($this->subjectStatsUseCase)($user->id, urldecode($subject), $year, $month);
 
         return response()->json($stats);
     }

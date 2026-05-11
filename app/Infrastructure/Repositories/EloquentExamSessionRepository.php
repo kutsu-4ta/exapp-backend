@@ -121,13 +121,21 @@ class EloquentExamSessionRepository implements ExamSessionRepositoryInterface
         return $question->fresh();
     }
 
-    public function findCompletedBySubject(int $userId, int $subjectId): Collection
+    public function findCompletedBySubject(int $userId, int $subjectId, ?int $year = null, ?int $month = null): Collection
     {
-        return ExamSession::with('questions')
+        $query = ExamSession::with('questions')
             ->where('user_id', $userId)
             ->where('subject_id', $subjectId)
             ->where('status', ExamSessionStatus::Completed)
-            ->orderByDesc('completed_at')
-            ->get();
+            ->orderByDesc('completed_at');
+
+        if ($year !== null) {
+            $query->whereYear('completed_at', $year);
+        }
+        if ($month !== null) {
+            $query->whereMonth('completed_at', $month);
+        }
+
+        return $query->get();
     }
 }

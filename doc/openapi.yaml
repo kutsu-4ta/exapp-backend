@@ -86,6 +86,19 @@ components:
           type: boolean
           description: '一度も学習していない科目も警告対象に含めるか'
 
+    SubjectSettings:
+      type: object
+      properties:
+        finalTarget: { type: string, nullable: true, maxLength: 500, description: '最終目標（科目全体）' }
+
+    SubjectMonthlyGoal:
+      type: object
+      required: [year, month]
+      properties:
+        year:  { type: integer, description: '対象年' }
+        month: { type: integer, minimum: 1, maximum: 12, description: '対象月' }
+        goal:  { type: string, nullable: true, maxLength: 1000, description: '今月の方針' }
+
     SubCategory:
       type: object
       required: [id, subject, name, createdAt, updatedAt]
@@ -581,6 +594,87 @@ paths:
               schema:
                 type: array
                 items: { type: string }
+        '401':
+          description: 未認証
+
+  /subjects/{name}/settings:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+    get:
+      summary: 科目設定を取得（最終目標など月によらない設定）
+      tags: [Subjects]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectSettings' }
+        '401':
+          description: 未認証
+    put:
+      summary: 科目設定を保存
+      tags: [Subjects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubjectSettings' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectSettings' }
+        '401':
+          description: 未認証
+
+  /subjects/{name}/monthly-goal/{year}/{month}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+      - name: year
+        in: path
+        required: true
+        schema: { type: integer }
+      - name: month
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 12 }
+    get:
+      summary: 科目の月別方針を取得
+      tags: [Subjects]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectMonthlyGoal' }
+        '401':
+          description: 未認証
+    put:
+      summary: 科目の月別方針を保存
+      tags: [Subjects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                goal: { type: string, nullable: true, maxLength: 1000 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectMonthlyGoal' }
         '401':
           description: 未認証
 
@@ -1454,6 +1548,16 @@ paths:
       tags: [Exam]
       description: |
         指定科目のランク別正答率と直近のミスメモ（note があるもの）を返す。
+        year/month を指定するとその月に completedAt がある試験セッションだけを集計する。
+      parameters:
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: month
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 12 }
       responses:
         '200':
           description: OK
