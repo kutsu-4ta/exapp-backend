@@ -338,6 +338,14 @@ components:
               date: { type: string, format: date }
               minutes: { type: integer }
 
+    SubjectActivityDay:
+      type: object
+      required: [date, studyMinutes, problemCount]
+      properties:
+        date:         { type: string, format: date, description: '対象日（YYYY-MM-DD）' }
+        studyMinutes: { type: integer, description: 'その日の該当科目の学習時間（分）' }
+        problemCount: { type: integer, description: 'その日に追加された苦手問題の数（solvedAt 一致）' }
+
     GeminiContextSubject:
       type: object
       description: 科目ごとのGeminiコピー用詳細データ
@@ -787,6 +795,39 @@ paths:
           description: 未認証
         '404':
           description: 科目が見つからない
+
+  /subjects/{subject}/activity:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+    get:
+      summary: 科目の日別アクティビティを取得
+      tags: [Subjects]
+      description: |
+        指定月の全日付について、該当科目の学習時間と苦手問題追加数を返す。
+        学習記録がない日は studyMinutes: 0、問題追加がない日は problemCount: 0 として返す。
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: month
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SubjectActivityDay' }
+        '401':
+          description: 未認証
 
   /subjects/{subject}/review-problems:
     parameters:

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\FlashcardResource;
 use App\UseCases\Problem\SelectReviewProblemsUseCase;
+use App\UseCases\Subject\GetSubjectActivityUseCase;
 use App\UseCases\Subject\GetSubjectMonthlyGoalUseCase;
 use App\UseCases\Subject\GetSubjectSettingsUseCase;
 use App\UseCases\Subject\UpsertSubjectMonthlyGoalUseCase;
@@ -19,6 +20,7 @@ class SubjectDetailController extends Controller
         private readonly GetSubjectMonthlyGoalUseCase    $getMonthlyGoal,
         private readonly UpsertSubjectMonthlyGoalUseCase $upsertMonthlyGoal,
         private readonly SelectReviewProblemsUseCase     $selectReviewProblems,
+        private readonly GetSubjectActivityUseCase       $getActivity,
     ) {}
 
     public function showSettings(Request $request, string $subject): JsonResponse
@@ -59,5 +61,18 @@ class SubjectDetailController extends Controller
         $problems = ($this->selectReviewProblems)($user->id, urldecode($subject));
 
         return response()->json(FlashcardResource::collection($problems));
+    }
+
+    public function activity(Request $request, string $subject): JsonResponse
+    {
+        $validated = $request->validate([
+            'year'  => ['required', 'integer'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+        ]);
+
+        $user = $request->user() ?? auth('sanctum')->user();
+        $data = ($this->getActivity)($user->id, urldecode($subject), (int) $validated['year'], (int) $validated['month']);
+
+        return response()->json($data);
     }
 }

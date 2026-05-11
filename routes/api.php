@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'showMonthlyGoal']);
     Route::put('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'upsertMonthlyGoal']);
     Route::get('subjects/{subject}/review-problems', [SubjectDetailController::class, 'reviewProblems']);
+    Route::get('subjects/{subject}/activity', [SubjectDetailController::class, 'activity']);
 
     // フラッシュカード（全科目 or 科目フィルタ）
     Route::get('flashcards', [FlashcardController::class, 'indexAll']);
