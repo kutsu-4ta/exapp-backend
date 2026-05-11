@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class GetDashboardStatsUseCase
 {
-    public function __invoke(int $userId): array
+    public function __invoke(int $userId, ?int $year = null, ?int $month = null): array
     {
         $now = Carbon::now();
-        $year = $now->year;
-        $month = $now->month;
+        $year  = $year  ?? $now->year;
+        $month = $month ?? $now->month;
         $today = $now->toDateString();
         $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
         $thirtyDaysAgo = $now->copy()->subDays(29)->toDateString();

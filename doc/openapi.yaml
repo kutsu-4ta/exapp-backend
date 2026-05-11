@@ -268,9 +268,10 @@ components:
         proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
-        solvedAt: { type: string, format: date }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        solvedAt:        { type: string, format: date }
+        lastTouchedAt:   { type: string, format: date-time, nullable: true, description: '直近にレビュー（今日の5問で確認）した日時。PUT /problems/:id で自動更新される' }
+        createdAt:       { type: string, format: date-time }
+        updatedAt:       { type: string, format: date-time }
 
     ProblemInput:
       type: object
@@ -336,6 +337,62 @@ components:
             properties:
               date: { type: string, format: date }
               minutes: { type: integer }
+
+    GeminiContextSubject:
+      type: object
+      description: 科目ごとのGeminiコピー用詳細データ
+      required: [subject, studyMinutes, problemCount, failureStats]
+      properties:
+        subject:
+          type: string
+        finalTarget:
+          type: string
+          nullable: true
+          description: '最終目標（SubjectSettings.finalTarget）'
+        monthlyGoal:
+          type: string
+          nullable: true
+          description: '今月の方針（SubjectMonthlyGoal.goal — year/month に対応）'
+        studyMinutes:
+          type: integer
+          description: '指定月の学習時間（分）'
+        problemCount:
+          type: integer
+          description: '習熟度が △ または × の弱点問題数'
+        failureStats:
+          type: array
+          description: 'ミスの種類別の件数と割合（問題あたりの failureTypes をカウント）'
+          items:
+            type: object
+            required: [type, count, ratio]
+            properties:
+              type:  { $ref: '#/components/schemas/FailureType' }
+              count: { type: integer, description: '該当ミス種別の件数' }
+              ratio: { type: number, format: float, minimum: 0, maximum: 1, description: '全ミス件数に対する割合（0.0〜1.0）' }
+
+    GeminiContext:
+      type: object
+      description: |
+        Geminiコピー用の集約コンテキスト。
+        ダッシュボード統計と全科目の詳細を1リクエストで返す。
+      required: [year, month, dashboard, subjects]
+      properties:
+        year:
+          type: integer
+          description: '集計対象年'
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: '集計対象月'
+        dashboard:
+          $ref: '#/components/schemas/DashboardStats'
+          description: 'ダッシュボード集計（subjectMinutes 等は指定月ベース）'
+        subjects:
+          type: array
+          description: '登録済み科目ごとの詳細（studyMinutes = 0 の科目も含む）'
+          items:
+            $ref: '#/components/schemas/GeminiContextSubject'
 
     Error:
       type: object
@@ -472,9 +529,10 @@ components:
 
     Flashcard:
       type: object
-      required: [id, subject, front, back]
+      required: [id, front, back]
       properties:
         id: { type: integer }
+        lastTouchedAt: { type: string, format: date, nullable: true, description: '最終演習日（未演習はnull）' }
         subject: { $ref: '#/components/schemas/Subject' }
         front:
           type: object
@@ -729,6 +787,31 @@ paths:
           description: 未認証
         '404':
           description: 科目が見つからない
+
+  /subjects/{subject}/review-problems:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        schema: { type: string }
+        description: URLエンコードされた科目名
+    get:
+      summary: 今解くべき5問を取得
+      tags: [Subjects]
+      description: |
+        以下の優先順位で苦手問題を最大5件返す。
+        1. `lastTouchedAt`（最終演習日）が古い順。未演習（null）を最優先。
+        2. `failureTypes` に `定義ミス` を含むものを優先。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Flashcard' }
+        '401':
+          description: 未認証
 
   /flashcards:
     get:
@@ -1302,6 +1385,29 @@ paths:
         '401':
           description: 未認証
 
+  /problems/{id}/touch:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      summary: 苦手問題の最終演習日を今日に更新
+      tags: [Problems]
+      description: |
+        `lastTouchedAt` を今日の日付に更新する。
+        科目詳細の「今解くべき5問」を演習したあとに呼び出す。
+      responses:
+        '200':
+          description: 更新後のFlashcard
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Flashcard' }
+        '401':
+          description: 未認証
+        '404':
+          description: 問題が見つからない
+
   /dashboard/stats:
     get:
       summary: ダッシュボード集計データを取得
@@ -1698,6 +1804,67 @@ paths:
           description: 未認証
         '422':
           description: バリデーションエラー
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Gemini Context ───────────────────────────────────────────────────────────
+
+  /gemini/context:
+    get:
+      summary: Geminiコピー用コンテキストデータを取得
+      tags: [AI]
+      description: |
+        ダッシュボード統計と全科目の詳細情報をまとめて返す。
+        フロントエンドがGemini向けプロンプトを組み立てる際に使用する。
+
+        **科目詳細に含まれるデータ:**
+        - `finalTarget` — 科目の最終目標（SubjectSettings）
+        - `monthlyGoal` — 指定月の今月の方針（SubjectMonthlyGoal）
+        - `studyMinutes` — 指定月の学習時間（分）
+        - `problemCount` — 習熟度 △/× の弱点問題数
+        - `failureStats` — ミスの種類別の件数と割合
+
+        `year`/`month` を省略すると現在の年月が使用される。
+      parameters:
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer }
+          description: '対象年（省略時: サーバー現在年）'
+        - name: month
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 12 }
+          description: '対象月（省略時: サーバー現在月）'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeminiContext' }
+              example:
+                year: 2026
+                month: 5
+                dashboard:
+                  currentStreak: 12
+                  allTotalMinutes: 14400
+                  thisMonthMinutes: 960
+                  subjectMinutes:
+                    - { subject: '財務・会計', minutes: 480 }
+                    - { subject: '企業経営理論', minutes: 480 }
+                subjects:
+                  - subject: '財務・会計'
+                    finalTarget: '70点以上で科目合格'
+                    monthlyGoal: '手薄な連結会計を重点的に'
+                    studyMinutes: 480
+                    problemCount: 23
+                    failureStats:
+                      - { type: '定義ミス', count: 10, ratio: 0.50 }
+                      - { type: '解法ミス', count: 7,  ratio: 0.35 }
+                      - { type: '計算ミス', count: 3,  ratio: 0.15 }
+        '401':
+          description: 未認証
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }

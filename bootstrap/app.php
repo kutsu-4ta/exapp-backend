@@ -23,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->renderable(function (AuthenticationException $e): JsonResponse {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        });
         $exceptions->renderable(function (ValidationException $e): JsonResponse {
             return response()->json([
                 'message' => $e->getMessage(),
