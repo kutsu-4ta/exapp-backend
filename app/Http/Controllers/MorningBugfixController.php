@@ -39,8 +39,8 @@ class MorningBugfixController extends Controller
             $strategy  = 'definition_focused';
         } else {
             $filter = new BugfixFilter(
-                failureType:   $request->input('failureType'),
-                subCategoryId: $request->integer('subCategoryId') ?: null,
+                failureTypes:   (array) $request->input('failureTypes', []),
+                subCategoryIds: (array) $request->input('subCategoryIds', []),
                 touchedOrder:  $request->input('touchedOrder'),
                 limit:         $request->integer('limit', BugfixFilter::DEFAULT_LIMIT),
                 proficiencies: $request->input('proficiency', BugfixFilter::defaultProficiencies()),

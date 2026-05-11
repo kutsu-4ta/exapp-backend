@@ -16,13 +16,18 @@ class MorningBugfixRequest extends FormRequest
         $proficiencies = array_column(Proficiency::cases(), 'value');
 
         return [
-            'date'          => ['sometimes', 'nullable', 'date'],
-            'failureType'   => ['sometimes', 'nullable', Rule::in($failureTypes)],
-            'subCategoryId' => ['sometimes', 'nullable', 'integer', 'exists:sub_categories,id'],
-            'touchedOrder'  => ['sometimes', 'nullable', Rule::in(['recent', 'old'])],
-            'limit'         => ['sometimes', 'integer', 'min:1', 'max:' . BugfixFilter::MAX_LIMIT],
-            'proficiency'   => ['sometimes', 'array'],
-            'proficiency.*' => ['string', Rule::in($proficiencies)],
+            'date'            => ['sometimes', 'nullable', 'date'],
+
+            'failureTypes'     => ['sometimes', 'array'],
+            'failureType.*'   => [Rule::in($failureTypes)],
+
+            'subCategoryIds'  => ['sometimes', 'array'],
+            'subCategoryIds.*' => ['integer', 'exists:sub_categories,id'],
+
+            'touchedOrder'    => ['sometimes', 'nullable', Rule::in(['recent', 'old'])],
+            'limit'           => ['sometimes', 'integer', 'min:1', 'max:' . BugfixFilter::MAX_LIMIT],
+            'proficiency'     => ['sometimes', 'array'],
+            'proficiency.*'   => ['string', Rule::in($proficiencies)],
         ];
     }
 }

@@ -12,8 +12,8 @@ class BugfixFilter
     public const MAX_LIMIT     = 10;
 
     public function __construct(
-        public readonly ?string $failureType,   // null = フィルターなし
-        public readonly ?int    $subCategoryId, // null = フィルターなし
+        public readonly array   $failureTypes,   // null 指定なし
+        public readonly array   $subCategoryIds, // null 指定なし
         public readonly ?string $touchedOrder,  // 'recent'|'old'|null（random）
         public readonly int     $limit,
         public readonly array   $proficiencies, // Proficiency values の配列。空 = フィルターなし
@@ -25,8 +25,8 @@ class BugfixFilter
     public static function morningDefault(?Carbon $date = null): self
     {
         return new self(
-            failureType:   FailureType::MissingDefinition->value,
-            subCategoryId: null,
+            failureTypes:   [FailureType::MissingDefinition->value], // 配列
+            subCategoryIds: [], // 配列
             touchedOrder:  null,
             limit:         self::DEFAULT_LIMIT,
             proficiencies: [],

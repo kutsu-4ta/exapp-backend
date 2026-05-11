@@ -73,8 +73,8 @@ class SelectMorningProblemsUseCase
         $query = Problem::where('user_id', $userId)
             ->with(['subject', 'subCategory']);
 
-        if ($filter->failureType !== null) {
-            $query->whereJsonContains('failure_types', $filter->failureType);
+        if ($filter->failureTypes !== []) {
+            $query->whereJsonContains('failure_types', $filter->failureTypes);
         }
 
         return $query;
@@ -99,7 +99,7 @@ class SelectMorningProblemsUseCase
         }
 
         // Tier 2: failureType のみ（subCategoryId を緩める）
-        if ($filter->subCategoryId !== null) {
+        if ($filter->subCategoryIds !== []) {
             $tier2 = $this->flexQuery($userId, $filter, useFailureType: true, useSubCategory: false)
                 ->whereNotIn('id', $selected->pluck('id'))
                 ->limit($limit - $selected->count())
@@ -112,7 +112,7 @@ class SelectMorningProblemsUseCase
         }
 
         // Tier 3: subCategoryId のみ（failureType を緩める）
-        if ($filter->failureType !== null && $filter->subCategoryId !== null) {
+        if ($filter->failureTypes !== null && $filter->subCategoryId !== null) {
             $tier3 = $this->flexQuery($userId, $filter, useFailureType: false, useSubCategory: true)
                 ->whereNotIn('id', $selected->pluck('id'))
                 ->limit($limit - $selected->count())
@@ -144,12 +144,18 @@ class SelectMorningProblemsUseCase
         $query = Problem::where('user_id', $userId)
             ->with(['subject', 'subCategory']);
 
-        if ($useFailureType && $filter->failureType !== null) {
-            $query->whereJsonContains('failure_types', $filter->failureType);
+        // ミス種別の複数選択対応 (JSON配列内のいずれか)
+        if ($useFailureType && !empty($filter->failureTypes)) {
+            $query->where(function ($q) use ($filter) {
+                foreach ($filter->failureTypes as $type) {
+                    $q->orWhereJsonContains('failure_types', $type);
+                }
+            });
         }
 
-        if ($useSubCategory && $filter->subCategoryId !== null) {
-            $query->where('sub_category_id', $filter->subCategoryId);
+        // 論点の複数選択対応
+        if ($useSubCategory && !empty($filter->subCategoryIds)) {
+            $query->whereIn('sub_category_id', $filter->subCategoryIds);
         }
 
         if (!empty($filter->proficiencies)) {

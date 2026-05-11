@@ -145,9 +145,9 @@ components:
       type: object
       required: [year, month]
       properties:
-        year:  { type: integer, description: '対象年' }
+        year: { type: integer, description: '対象年' }
         month: { type: integer, minimum: 1, maximum: 12, description: '対象月' }
-        goal:  { type: string, nullable: true, maxLength: 1000, description: '今月の方針' }
+        goal: { type: string, nullable: true, maxLength: 1000, description: '今月の方針' }
 
     SubCategory:
       type: object
@@ -210,10 +210,10 @@ components:
             type: object
             required: [index, judgement, elapsedMs]
             properties:
-              index:     { type: integer, description: '問題番号（1始まり）' }
+              index: { type: integer, description: '問題番号（1始まり）' }
               judgement: { type: string, description: '回答（複数設問はカンマ区切り、例: "ア,イ"）' }
               elapsedMs: { type: integer, minimum: 0, description: 'この問題にかかった時間（ms）' }
-              note:      { type: string, nullable: true, description: '選択した選択肢のメモ（複数設問は改行結合）' }
+              note: { type: string, nullable: true, description: '選択した選択肢のメモ（複数設問は改行結合）' }
               memos:
                 type: array
                 description: '設問ごとの全選択肢メモ（judgement の順に対応）'
@@ -392,7 +392,7 @@ components:
       type: object
       required: [date, studyMinutes, problemCount]
       properties:
-        date:         { type: string, format: date, description: '対象日（YYYY-MM-DD）' }
+        date: { type: string, format: date, description: '対象日（YYYY-MM-DD）' }
         studyMinutes: { type: integer, description: 'その日の該当科目の学習時間（分）' }
         problemCount: { type: integer, description: 'その日に追加された苦手問題の数（solvedAt 一致）' }
 
@@ -2121,12 +2121,12 @@ paths:
       tags: [AI]
       description: |
         苦手問題から定義理解クイズを生成して返す汎用エンドポイント。
-        新パラメータ（`failureType`, `subCategoryId`, `touchedOrder`, `proficiency`, `limit`）を
+        新パラメータ（`failureType`, `subCategoryIds`, `touchedOrder`, `proficiency`, `limit`）を
         **1つも指定しない**場合は Morning Bugfix モードとして動作し、既存の挙動を維持する。
         いずれか1つでも指定した場合は Flash Bugfix モード（柔軟フィルタ）として動作する。
 
         ### Morning Bugfix モード（パラメータ未指定）
-        デフォルト: `failureType=定義ミス`, `limit=5`
+        デフォルト: `failureType=['定義ミス']`, `limit=5`
 
         **3段階フォールバック:**
         1. `last_touched_at == 昨日` かつ `定義ミス`（RANDOM）
@@ -2137,14 +2137,14 @@ paths:
 
         ### Flash Bugfix モード（任意パラメータ指定）
         指定した条件で問題を抽出し、不足時は段階的に条件を緩めて補填する。
+        複数選択されたパラメータ（`failureType`, `subCategoryIds`, `proficiency`）は、
+        それぞれの配列内での **OR条件** としてフィルタリングされる。
 
         **フォールバック順:**
-        1. `failureType` + `subCategoryId`
-        2. `failureType` のみ（`subCategoryId` を緩める）
-        3. `subCategoryId` のみ（`failureType` を緩める）
+        1. `failureType` + `subCategoryIds`（フル条件）
+        2. `failureType` のみ（`subCategoryIds` を緩める）
+        3. `subCategoryIds` のみ（`failureType` を緩める）
         4. 全問題（習熟度低い順）
-
-        **例:** `?subCategoryId=12&failureType=定義ミス&touchedOrder=old&limit=10`
       parameters:
         - name: date
           in: query
@@ -2154,15 +2154,23 @@ paths:
         - name: failureType
           in: query
           required: false
-          schema: { $ref: '#/components/schemas/FailureType' }
-          description: 'ミス種別フィルタ。未指定なら全ミス種別対象（Morning Bugfix デフォルト: 定義ミス）'
-          example: '定義ミス'
-        - name: subCategoryId
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/FailureType' }
+          description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象（Morning Bugfix デフォルト: [定義ミス]）'
+          example: ['定義ミス', '解法ミス']
+        - name: subCategoryIds
           in: query
           required: false
-          schema: { type: integer }
-          description: '小分類ID。未指定なら全小分類対象'
-          example: 12
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: integer }
+          description: '小分類IDフィルタ（複数選択可）。未指定なら全小分類対象'
+          example: [12, 15]
         - name: touchedOrder
           in: query
           required: false
@@ -2185,6 +2193,12 @@ paths:
             items: { $ref: '#/components/schemas/Proficiency' }
           description: '習熟度フィルタ（複数選択可）。未指定なら △/× のみ'
           example: ['△', '×']
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string }
+          description: '科目名フィルタ（Flash Bugfix 専用）。指定するとその科目の問題のみを対象にする'
+          example: '企業経営理論'
       responses:
         '200':
           description: OK
