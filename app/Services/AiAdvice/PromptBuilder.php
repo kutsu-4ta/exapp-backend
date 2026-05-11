@@ -13,7 +13,10 @@ final class PromptBuilder
 
         return match ($mode) {
             AiAdviceMode::ANALYSIS =>
-                $base . "You are a data-driven study coach ({$ctx->profile->goal}). Analyze the stats and provide a specific action plan (time, subject, material) for the remaining time. Tone: Professional and objective.",
+                $base . "You are a data-driven study strategist for the Chusho Shindanshi exam ({$ctx->profile->goal}). " .
+                "Using the comprehensive data provided, output a concrete action plan: (1) which subject to prioritize next and why, " .
+                "(2) which mistake type to target, (3) specific time allocation. " .
+                "Cross-reference monthly vs all-time subject hours, neglected subjects, and mistake patterns. Tone: Analytical and decisive.",
 
             AiAdviceMode::INSPIRATION =>
                 $base . "You are a supportive mentor ({$ctx->profile->goal}). Validate their effort using academic/logical backing. Tone: Warm and encouraging.",
@@ -44,10 +47,29 @@ final class PromptBuilder
 
     private function analysisPrompt(AdviceContext $ctx): string
     {
-        return "Goal: {$ctx->profile->weeklyTargetMinutes}m | Actual: {$ctx->thisWeekMinutes}m | Remain: {$ctx->weeklyRemainingMinutes()}m\n" .
-            "Stats: {$this->formatSubjectMinutes($ctx->subjectMinutes)}\n" .
-            "Weak: {$this->formatWeakSubjects($ctx->weakSubjects)}\n" .
-            "Materials: {$this->formatMaterials($ctx->materials)}";
+        return implode("\n", [
+            "[Monthly Summary - {$ctx->year}/{$ctx->month}]",
+            "Study days: {$ctx->studyDays} | Total: {$ctx->totalMonthMinutes}min",
+            "This week: {$ctx->thisWeekMinutes}min / target {$ctx->profile->weeklyTargetMinutes}min (remain: {$ctx->weeklyRemainingMinutes()}min)",
+            "",
+            "[Subject Hours - This Month]",
+            $this->formatSubjectMinutes($ctx->subjectMinutes),
+            "",
+            "[Subject Hours - All Time]",
+            $this->formatSubjectMinutes($ctx->allTimeSubjectMinutes),
+            "",
+            "[Neglected Subjects (no study in 30+ days)]",
+            empty($ctx->untouchedSubjects) ? '(none)' : implode(', ', $ctx->untouchedSubjects),
+            "",
+            "[Weak Problems by Subject (count)]",
+            $this->formatWeakSubjects($ctx->weakSubjects),
+            "",
+            "[Mistake Patterns by Subject]",
+            $this->formatFailureTypes($ctx->failureTypesBySubject),
+            "",
+            "[Available Materials]",
+            $this->formatMaterials($ctx->materials),
+        ]);
     }
 
     private function inspirationPrompt(AdviceContext $ctx): string
@@ -105,6 +127,23 @@ PROMPT;
             fn ($name, $cnt) => "{$name}:{$cnt}",
             array_keys($weakSubjects),
             $weakSubjects,
+        ));
+    }
+
+    private function formatFailureTypes(array $failureTypesBySubject): string
+    {
+        if (empty($failureTypesBySubject)) {
+            return '(none)';
+        }
+
+        return implode(' | ', array_map(
+            fn ($subject, $types) => "{$subject}[" . implode(', ', array_map(
+                fn ($type, $count) => "{$type}:{$count}",
+                array_keys($types),
+                $types,
+            )) . ']',
+            array_keys($failureTypesBySubject),
+            $failureTypesBySubject,
         ));
     }
 

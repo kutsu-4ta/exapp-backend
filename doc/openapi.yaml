@@ -459,9 +459,10 @@ components:
 
     Flashcard:
       type: object
-      required: [id, front, back]
+      required: [id, subject, front, back]
       properties:
         id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
         front:
           type: object
           required: [questionRef, solvedAt]

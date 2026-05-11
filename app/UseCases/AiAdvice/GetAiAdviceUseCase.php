@@ -103,34 +103,96 @@ class GetAiAdviceUseCase
         $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
         $weekStart    = $now->copy()->startOfWeek()->toDateString();
 
-        $subjectMinutes = $this->subjectMinutes($userId, $year, $month);
-        $last7DaysMin   = $this->rangeMinutes($userId, $sevenDaysAgo, $today);
-        $thisWeekMin    = $this->rangeMinutes($userId, $weekStart, $today);
-        $studyDays      = $this->studyDays($userId, $year, $month);
-        $totalMonthMin  = array_sum($subjectMinutes);
-        $weakSubjects   = $this->weakSubjects($userId);
-        $currentStreak  = $this->currentStreak($userId, $now);
-        $lastSubject    = $this->lastStudiedSubject($userId);
+        $subjectMinutes        = $this->subjectMinutes($userId, $year, $month);
+        $allTimeSubjectMinutes = $this->allTimeSubjectMinutes($userId);
+        $last7DaysMin          = $this->rangeMinutes($userId, $sevenDaysAgo, $today);
+        $thisWeekMin           = $this->rangeMinutes($userId, $weekStart, $today);
+        $studyDays             = $this->studyDays($userId, $year, $month);
+        $totalMonthMin         = array_sum($subjectMinutes);
+        $weakSubjects          = $this->weakSubjects($userId);
+        $untouchedSubjects     = $this->untouchedSubjects($userId, $now);
+        $failureTypesBySubject = $this->failureTypesBySubject($userId);
+        $currentStreak         = $this->currentStreak($userId, $now);
+        $lastSubject           = $this->lastStudiedSubject($userId);
 
         return new AdviceContext(
-            year:               $year,
-            month:              $month,
-            totalMonthMinutes:  $totalMonthMin,
-            studyDays:          $studyDays,
-            last7DaysMinutes:   $last7DaysMin,
-            thisWeekMinutes:    $thisWeekMin,
-            currentStreak:      $currentStreak,
-            subjectMinutes:     $subjectMinutes,
-            weakSubjects:       $weakSubjects,
-            lastSubject:        $lastSubject,
-            profile:            $profile,
-            materials:          $materials,
+            year:                  $year,
+            month:                 $month,
+            totalMonthMinutes:     $totalMonthMin,
+            studyDays:             $studyDays,
+            last7DaysMinutes:      $last7DaysMin,
+            thisWeekMinutes:       $thisWeekMin,
+            currentStreak:         $currentStreak,
+            subjectMinutes:        $subjectMinutes,
+            allTimeSubjectMinutes: $allTimeSubjectMinutes,
+            weakSubjects:          $weakSubjects,
+            untouchedSubjects:     $untouchedSubjects,
+            failureTypesBySubject: $failureTypesBySubject,
+            lastSubject:           $lastSubject,
+            profile:               $profile,
+            materials:             $materials,
         );
     }
 
     // ----------------------------------------------------------------
     // DB クエリ群
     // ----------------------------------------------------------------
+
+    private function allTimeSubjectMinutes(int $userId): array
+    {
+        return StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
+            ->where('daily_logs.user_id', $userId)
+            ->groupBy('subjects.id', 'subjects.name')
+            ->orderByDesc(DB::raw('SUM(study_sessions.minutes)'))
+            ->get([
+                'subjects.name as subject_name',
+                DB::raw('SUM(study_sessions.minutes) as total_minutes'),
+            ])
+            ->mapWithKeys(fn ($row) => [$row->subject_name => (int) $row->total_minutes])
+            ->toArray();
+    }
+
+    private function untouchedSubjects(int $userId, Carbon $now, int $days = 30): array
+    {
+        $since = $now->copy()->subDays($days)->toDateString();
+
+        $allSubjects = StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
+            ->where('daily_logs.user_id', $userId)
+            ->distinct()
+            ->pluck('subjects.name')
+            ->toArray();
+
+        $recentSubjects = StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
+            ->join('subjects', 'subjects.id', '=', 'study_sessions.subject_id')
+            ->where('daily_logs.user_id', $userId)
+            ->where('daily_logs.date', '>=', $since)
+            ->distinct()
+            ->pluck('subjects.name')
+            ->toArray();
+
+        return array_values(array_diff($allSubjects, $recentSubjects));
+    }
+
+    private function failureTypesBySubject(int $userId): array
+    {
+        $problems = Problem::join('subjects', 'subjects.id', '=', 'problems.subject_id')
+            ->where('problems.user_id', $userId)
+            ->whereNotNull('problems.failure_types')
+            ->get(['subjects.name as subject_name', 'problems.failure_types']);
+
+        $result = [];
+        foreach ($problems as $p) {
+            $subject = $p->subject_name;
+            $types   = is_array($p->failure_types) ? $p->failure_types : (json_decode($p->failure_types, true) ?? []);
+            foreach ($types as $type) {
+                $result[$subject][$type] = ($result[$subject][$type] ?? 0) + 1;
+            }
+        }
+
+        return $result;
+    }
 
     private function subjectMinutes(int $userId, int $year, int $month): array
     {
