@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\GeminiQuotaExceededException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -29,7 +30,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->renderable(function (ValidationException $e): JsonResponse {
             return response()->json([
                 'message' => $e->getMessage(),
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
+        });
+        $exceptions->renderable(function (GeminiQuotaExceededException $e): JsonResponse {
+            return response()->json([
+                'code'    => 'GEMINI_QUOTA_EXCEEDED',
+                'message' => 'AIの利用上限に達しました。しばらく時間をおいてから再試行してください。',
+            ], 429);
         });
     })->create();

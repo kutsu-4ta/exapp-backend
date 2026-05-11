@@ -19,6 +19,56 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  responses:
+    Unauthorized:
+      description: 未認証（トークン未送信または期限切れ）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 'Unauthenticated.' }
+
+    NotFound:
+      description: 指定されたリソースが見つからない
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: '指定されたリソースが見つかりません。' }
+
+    UnprocessableEntity:
+      description: バリデーションエラー
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            message: 'The given data was invalid.'
+            errors:
+              field: ['フィールドは必須です。']
+
+    Conflict:
+      description: リソースが既に存在する、または競合が発生した
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: '同じ名前のリソースが既に存在します。' }
+
+    GeminiUnavailable:
+      description: Gemini APIが応答しない（busy / 地域制限）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 'Gemini is busy (503)' }
+
+    GeminiQuotaExceeded:
+      description: Gemini APIの利用上限超過
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code:    { type: string, example: 'GEMINI_QUOTA_EXCEEDED' }
+              message: { type: string, example: 'AIの利用上限に達しました。しばらく時間をおいてから再試行してください。' }
+
   schemas:
     StopwatchState:
       type: object
@@ -595,6 +645,7 @@ components:
             failureTypes:   { type: array, items: { $ref: '#/components/schemas/FailureType' } }
             isGoodQuestion: { type: boolean }
 
+
 paths:
   # ── Stopwatch ─────────────────────────────────────────────────────────────────
 
@@ -613,10 +664,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StopwatchState' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   /stopwatch/start:
     post:
@@ -633,15 +681,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StopwatchState' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
         '409':
-          description: すでに計測中
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Conflict'
 
   /stopwatch/stop:
     post:
@@ -658,10 +700,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StopwatchState' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   /stopwatch/reset:
     post:
@@ -677,10 +716,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StopwatchState' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   # ── Subjects ─────────────────────────────────────────────────────────────────
 
@@ -697,7 +733,7 @@ paths:
                 type: array
                 items: { type: string }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
 
   /subjects/{name}/settings:
     parameters:
@@ -716,7 +752,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubjectSettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: 科目設定を保存
       tags: [Subjects]
@@ -732,7 +770,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubjectSettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /subjects/{name}/monthly-goal/{year}/{month}:
     parameters:
@@ -759,7 +801,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubjectMonthlyGoal' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: 科目の月別方針を保存
       tags: [Subjects]
@@ -778,7 +822,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubjectMonthlyGoal' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /subjects/{name}:
     parameters:
@@ -811,14 +859,13 @@ paths:
                 properties:
                   name: { type: string }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 科目が見つからない
+          $ref: '#/components/responses/NotFound'
         '409':
-          description: 同名の科目が既に存在する
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 科目を削除（カスケード）
       description: |
@@ -828,9 +875,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 科目が見つからない
+          $ref: '#/components/responses/NotFound'
 
   /subjects/{subject}/activity:
     parameters:
@@ -863,7 +910,11 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/SubjectActivityDay' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /subjects/{subject}/review-problems:
     parameters:
@@ -888,7 +939,9 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Flashcard' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /flashcards:
     get:
@@ -918,10 +971,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Flashcard' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   /subjects/{subject}/flashcards:
     parameters:
@@ -960,10 +1010,9 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Flashcard' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ── Materials ────────────────────────────────────────────────────────────────
 
@@ -980,7 +1029,7 @@ paths:
                 type: array
                 items: { type: string }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
 
   /materials/{name}:
     parameters:
@@ -1011,14 +1060,13 @@ paths:
                 properties:
                   name: { type: string }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 教材が見つからない
+          $ref: '#/components/responses/NotFound'
         '409':
-          description: 同名の教材が既に存在する
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 教材を削除
       description: |
@@ -1028,9 +1076,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 教材が見つからない
+          $ref: '#/components/responses/NotFound'
 
   # ── Alert Settings ──────────────────────────────────────────────────────────
 
@@ -1046,7 +1094,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AlertSettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     put:
       summary: アラート設定を保存
       tags: [Alert Settings]
@@ -1062,7 +1110,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AlertSettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── Sub Categories ──────────────────────────────────────────────────────────
 
@@ -1085,7 +1135,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/SubCategory' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     post:
       summary: 小分類を追加
       tags: [Sub Categories]
@@ -1101,7 +1151,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubCategory' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /sub-categories/{id}:
     parameters:
@@ -1124,9 +1176,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubCategory' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 小分類を削除
       tags: [Sub Categories]
@@ -1134,7 +1188,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ── Monthly Settings ────────────────────────────────────────────────────────
 
@@ -1159,7 +1215,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MonthlySettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     put:
       summary: 月間設定を保存
       tags: [Monthly Settings]
@@ -1175,7 +1231,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MonthlySettings' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── Daily Logs ──────────────────────────────────────────────────────────────
 
@@ -1201,7 +1259,9 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/DailyLogSummary' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     post:
       summary: デイリーログを作成
       tags: [Daily Logs]
@@ -1221,7 +1281,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 同日のログが既に存在する
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { message: '指定された日付のログは既に存在します。' }
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /daily-logs/recent:
     get:
@@ -1247,7 +1315,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/DailyLogSummary' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
 
   /daily-logs/{date}:
     parameters:
@@ -1255,17 +1323,6 @@ paths:
         in: path
         required: true
         schema: { type: string, format: date }
-    delete:
-      summary: デイリーログを削除
-      description: 指定日のデイリーログとそれに紐づく学習セッションをすべて削除する。
-      tags: [Daily Logs]
-      responses:
-        '204':
-          description: 削除成功
-        '401':
-          description: 未認証
-        '404':
-          description: 見つからない
     get:
       summary: 特定日のログを取得
       tags: [Daily Logs]
@@ -1276,9 +1333,13 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 未作成
+          description: 指定日のログが未作成
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { message: '指定された日付のログが見つかりません。' }
     put:
       summary: 振り返りテキストを更新
       tags: [Daily Logs]
@@ -1297,7 +1358,20 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: デイリーログを削除
+      description: 指定日のデイリーログとそれに紐づく学習セッションをすべて削除する。
+      tags: [Daily Logs]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /daily-logs/{date}/complete:
     parameters:
@@ -1315,9 +1389,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
 
   /daily-logs/{date}/uncomplete:
     parameters:
@@ -1335,9 +1409,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DailyLog' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
 
   /study-sessions:
     post:
@@ -1361,7 +1435,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StudySession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 指定日のデイリーログが見つからない
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { message: '指定された日付のログが見つかりません。' }
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /study-sessions/{id}:
     parameters:
@@ -1384,7 +1466,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StudySession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 学習ブロックを削除
       tags: [Study Sessions]
@@ -1392,7 +1478,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /problems:
     get:
@@ -1413,7 +1501,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Problem' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     post:
       summary: 苦手問題を追加
       tags: [Problems]
@@ -1429,7 +1517,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /problems/{id}:
     parameters:
@@ -1437,6 +1527,19 @@ paths:
         in: path
         required: true
         schema: { type: integer }
+    get:
+      summary: 苦手問題を1件取得
+      tags: [Problems]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: 苦手問題を更新
       tags: [Problems]
@@ -1452,7 +1555,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 苦手問題を削除
       tags: [Problems]
@@ -1460,7 +1567,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /problems/{id}/touch:
     parameters:
@@ -1481,9 +1590,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Flashcard' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 問題が見つからない
+          $ref: '#/components/responses/NotFound'
 
   /dashboard/stats:
     get:
@@ -1496,7 +1605,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DashboardStats' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
 
   # ── Exam Sessions ───────────────────────────────────────────────────────────
 
@@ -1524,7 +1633,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/ExamSessionSummary' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     post:
       summary: 試験セッションを作成
       tags: [Exam]
@@ -1545,7 +1654,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamSession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /exam-sessions/{id}:
     parameters:
@@ -1563,9 +1674,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamSession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
     put:
       summary: 試験セッションのメタデータを更新
       tags: [Exam]
@@ -1587,9 +1698,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamSession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 試験セッションを削除
       tags: [Exam]
@@ -1597,9 +1710,9 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
 
   /exam-sessions/{id}/complete:
     parameters:
@@ -1633,14 +1746,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamSession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 見つからない
+          $ref: '#/components/responses/NotFound'
         '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /exam-sessions/{id}/questions/{sortOrder}:
     parameters:
@@ -1702,20 +1812,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamQuestion' }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: 試験セッションが見つからない
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/NotFound'
         '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── Exam Subject Stats ───────────────────────────────────────────────────────
 
@@ -1748,7 +1849,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExamSubjectStats' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /auth/google:
     post:
@@ -1786,6 +1889,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+              example: { message: 'Firebase IDトークンが無効です。' }
 
   /auth/refresh:
     post:
@@ -1812,10 +1916,11 @@ paths:
                 properties:
                   token: { type: string, description: '新しいアクセストークン（Bearer）' }
         '401':
-          description: リフレッシュトークンが無効
+          description: リフレッシュトークンが無効または期限切れ
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+              example: { message: 'リフレッシュトークンが無効です。再ログインしてください。' }
 
   /auth/me:
     get:
@@ -1836,10 +1941,7 @@ paths:
                   name: { type: string }
                   email: { type: string, format: email }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   # ── Profile ──────────────────────────────────────────────────────────────────
 
@@ -1854,7 +1956,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UserProfile' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
     put:
       summary: プロフィール更新（upsert）
       tags: [Profile]
@@ -1878,12 +1980,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UserProfile' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── Gemini Context ───────────────────────────────────────────────────────────
 
@@ -1941,10 +2040,7 @@ paths:
                       - { type: '解法ミス', count: 7,  ratio: 0.35 }
                       - { type: '計算ミス', count: 3,  ratio: 0.15 }
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
 
   # ── Morning Bugfix ───────────────────────────────────────────────────────────
 
@@ -1974,7 +2070,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MorningBugfixSession' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/GeminiQuotaExceeded'
+        '503':
+          $ref: '#/components/responses/GeminiUnavailable'
 
   # ── AI Advice ────────────────────────────────────────────────────────────────
 
@@ -2023,20 +2123,17 @@ paths:
                     description: 生成されたアドバイス（100〜250文字程度）
                     example: '今週は財務・会計に集中しているが、法務が0分。残り12時間のうち3時間を法務に充て、過去問2年分を解くことで弱点を一気に潰せる。'
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
         '422':
           description: modeが不正
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+              example: { message: 'The given data was invalid.', errors: { mode: ['modeは ANALYSIS, INSPIRATION, ANALOGY, WARNING のいずれかを指定してください。'] } }
+        '429':
+          $ref: '#/components/responses/GeminiQuotaExceeded'
         '503':
-          description: Gemini API 呼び出し失敗
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/GeminiUnavailable'
 
   /ai/analysis:
     post:
@@ -2074,25 +2171,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '401':
-          description: 未認証
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/Unauthorized'
         '422':
-          description: バリデーションエラー（ファイル形式不正など）
+          description: バリデーションエラー（ファイル形式・サイズ不正など）
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+              example: { message: 'The given data was invalid.', errors: { image: ['画像ファイルは必須です。'] } }
+        '429':
+          $ref: '#/components/responses/GeminiQuotaExceeded'
         '500':
-          description: Gemini が JSON を返さなかった場合など
+          description: Gemini が期待する JSON を返さなかった場合など
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+              example: { message: 'Gemini returned invalid JSON' }
         '503':
-          description: Gemini API 呼び出し失敗（クォータ超過など）
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/GeminiUnavailable'
 
   # ── Practice sessions ────────────────────────────────────────────────────────
 
@@ -2112,12 +2207,9 @@ paths:
         '204':
           description: 保存成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /practice/sessions/draft/{subject}:
     parameters:
@@ -2135,10 +2227,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PracticeSessionDraft' }
-        '404':
-          description: ドラフトなし
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ドラフトなし（演習未開始または完了・削除済み）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { message: '指定された科目のドラフトが見つかりません。' }
     delete:
       summary: 演習ドラフトを削除（完了・破棄時）
       tags: [Practice]
@@ -2146,7 +2242,7 @@ paths:
         '204':
           description: 削除成功
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
 
   /practice/sessions:
     post:
@@ -2168,12 +2264,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PracticeSessionResult' }
         '401':
-          description: 未認証
+          $ref: '#/components/responses/Unauthorized'
         '422':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          $ref: '#/components/responses/UnprocessableEntity'
 
   /auth/logout:
     post:
@@ -2183,7 +2276,7 @@ paths:
         現在使用中のアクセストークンを削除し、セッションを終了します。
         内部的には Laravel Sanctum の `currentAccessToken()->delete()` を実行します。
       security:
-        - bearerAuth: [] # この操作には有効なトークンが必須
+        - bearerAuth: []
       responses:
         '200':
           description: ログアウト成功
@@ -2196,8 +2289,4 @@ paths:
                     type: string
                     example: ログアウトしました。
         '401':
-          description: 未認証、またはトークンが無効
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/Unauthorized'

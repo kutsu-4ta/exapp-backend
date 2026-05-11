@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\GeminiQuotaExceededException;
 use Illuminate\Support\Facades\Http;
 
 class GeminiService
@@ -151,7 +152,7 @@ class GeminiService
                 throw new \RuntimeException('Gemini is not available in this region (FAILED_PRECONDITION)');
             }
             if ($status === 'RESOURCE_EXHAUSTED' || $response->status() === 429) {
-                throw new \RuntimeException('Gemini quota exceeded (RESOURCE_EXHAUSTED)');
+                throw new GeminiQuotaExceededException();
             }
             throw new \RuntimeException(
                 "Gemini error: {$response->status()} {$response->body()}"
