@@ -1539,6 +1539,23 @@ paths:
           required: false
           schema: { type: integer, minimum: 1 }
           description: 取得件数（省略時は全件）。`solved_at` 降順・`created_at` 降順で先頭から取得。
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: フリーワード検索。問題文や解説文から部分一致で検索。
+        - name: subjects
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: >
+            科目による絞り込み。カンマ区切りで複数指定した場合、
+            指定したすべての科目に該当する問題を抽出（AND検索）。
       responses:
         '200':
           description: OK

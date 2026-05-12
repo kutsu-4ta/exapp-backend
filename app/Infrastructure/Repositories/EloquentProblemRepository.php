@@ -8,33 +8,23 @@ use Illuminate\Support\Collection;
 
 class EloquentProblemRepository implements ProblemRepositoryInterface
 {
-    public function findAllByUser(int $userId, ?int $limit = null, ?int $afterId = null): Collection
+    public function findAllByUser(int $userId, ?int $limit = null, ?string $q = null, array $subjects = []): Collection
     {
         $query = Problem::where('user_id', $userId)
+            ->with(['subject', 'subCategory', 'material'])
             ->orderByDesc('solved_at')
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
-        if ($afterId !== null) {
-            $cursor = Problem::where('user_id', $userId)->find($afterId);
-            if ($cursor) {
-                $solvedAt  = $cursor->solved_at;
-                $createdAt = $cursor->created_at;
-                $cursorId  = $cursor->id;
-                $query->where(function ($q) use ($solvedAt, $createdAt, $cursorId) {
-                    $q->where('solved_at', '<', $solvedAt)
-                      ->orWhere(function ($q2) use ($solvedAt, $createdAt, $cursorId) {
-                          $q2->where('solved_at', $solvedAt)
-                             ->where(function ($q3) use ($createdAt, $cursorId) {
-                                 $q3->where('created_at', '<', $createdAt)
-                                    ->orWhere(function ($q4) use ($createdAt, $cursorId) {
-                                        $q4->where('created_at', $createdAt)
-                                           ->where('id', '<', $cursorId);
-                                    });
-                             });
-                      });
-                });
-            }
+        if ($q !== null && $q !== '') {
+            $query->where(function ($clause) use ($q) {
+                $clause->where('question_ref', 'ILIKE', "%{$q}%")
+                       ->orWhere('note', 'ILIKE', "%{$q}%");
+            });
+        }
+
+        if (!empty($subjects)) {
+            $query->whereHas('subject', fn ($clause) => $clause->whereIn('name', $subjects));
         }
 
         if ($limit !== null) {

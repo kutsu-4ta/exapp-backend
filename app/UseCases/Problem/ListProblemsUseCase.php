@@ -11,8 +11,8 @@ class ListProblemsUseCase
         private readonly ProblemRepositoryInterface $repository,
     ) {}
 
-    public function __invoke(int $userId, ?int $limit = null, ?int $afterId = null): Collection
+    public function __invoke(int $userId, ?int $limit = null, ?string $q = null, array $subjects = []): Collection
     {
-        return $this->repository->findAllByUser($userId, $limit, $afterId);
+        return $this->repository->findAllByUser($userId, $limit, $q, $subjects);
     }
 }
