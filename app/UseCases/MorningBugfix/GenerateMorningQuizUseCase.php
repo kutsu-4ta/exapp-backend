@@ -21,10 +21,10 @@ class GenerateMorningQuizUseCase
      * @param  Collection<Problem>  $problems
      * @return array  問題IDをキーとした quiz データ配列
      */
-    public function __invoke(Collection $problems, ?string $apiKey = null, ?string $model = null): array
+    public function __invoke(Collection $problems, ?string $apiKey = null, ?string $model = null, ?string $exam = null, ?string $theme = null, ?int $count = 0): array
     {
-        $systemInstruction = $this->buildSystemInstruction();
-        $userPrompt        = $this->buildUserPrompt($problems);
+        $systemInstruction = $this->buildSystemInstruction($exam, $theme, $count);
+        $userPrompt        = $this->buildUserPrompt($problems, $count);
         $responseSchema    = $this->buildResponseSchema();
 
         $raw = $this->gemini->generateJson($systemInstruction, $userPrompt, $responseSchema, $apiKey, $model);
@@ -45,27 +45,27 @@ class GenerateMorningQuizUseCase
         return $quizByProblemId;
     }
 
-    private function buildSystemInstruction(): string
+    private function buildSystemInstruction(?string $exam = null, ?string $theme = null, ?int $count = 2): string
     {
-        $exam  = self::EXAM_NAME;
-        $theme = self::FOCUS_THEME;
-        $count = self::OPTION_COUNT;
+        $exam  = $exam  ?? self::EXAM_NAME;
+        $theme = $theme ?? self::FOCUS_THEME;
+        $count = $count ?? self::OPTION_COUNT;
 
         return <<<TEXT
-あなたは{$exam}の「{$theme}」特化型問題生成AIです。
-ユーザーが実際に間違えた苦手問題データを基に、定義の本質を問う{$count}択選択問題を生成します。
+あなたは{$exam}の問題生成AIです。
+ユーザーが実際に間違えた苦手問題データを基に、「{$theme}」を問う{$count}択選択問題を生成します。
 
 【必須ルール】
 1. 選択肢は、単なる正誤ではなく、混同しやすい類似定義をあえて混ぜて、ユーザーの論理的解釈力をテストしてください。消去法ではなく「定義の理解」を強制する良問にしてください。
 2. explanationには、user_memoにある定義・キーワード、公式を必ず組み込み、正しい定義を明示してください（ハルシネーション防止）。
-3. すべての文章は日本語で生成してください。
+3. すべての文章は日本語で生成し、「user_memoにあるように」のような余計な言葉は不要です。
 4. correct_indexは0〜{$count}の範囲内の整数で返してください（0始まり）。
 TEXT;
     }
 
-    private function buildUserPrompt(Collection $problems): string
+    private function buildUserPrompt(Collection $problems, int $count): string
     {
-        $count = self::OPTION_COUNT;
+//        $count = self::OPTION_COUNT;
         $items = $problems->map(fn (Problem $p) => [
             'problem_id'   => $p->id,
             'subject'      => $p->subject?->name ?? '',

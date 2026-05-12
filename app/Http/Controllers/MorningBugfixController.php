@@ -66,7 +66,13 @@ class MorningBugfixController extends Controller
 
         $geminiToken     = UserProfile::where('user_id', $user->id)->value('gemini_token');
         $geminiModel     = AiUserProfile::where('user_id', $user->id)->value('gemini_model');
-        $quizByProblemId = ($this->generateQuiz)($problems, $geminiToken ?: null, $geminiModel ?: null);
+
+        // 将来的にはDBやパラメータから渡す
+        $exam     = '中小企業診断士資格試験';
+        $theme    = '定義理解';
+        $count    = 4;
+
+        $quizByProblemId = ($this->generateQuiz)($problems, $geminiToken ?: null, $geminiModel ?: null, $exam, $theme, $count);
 
         $questions = $problems->map(function ($problem) use ($quizByProblemId) {
             $quiz = $quizByProblemId[$problem->id] ?? null;
