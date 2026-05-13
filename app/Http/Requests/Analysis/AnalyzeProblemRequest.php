@@ -16,7 +16,7 @@ class AnalyzeProblemRequest extends FormRequest
                 'mimes:jpeg,jpg,png,webp,heic',
                 'max:10240',
             ],
-            'memo' => ['nullable', 'string', 'max:2000'],
+            'id' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

@@ -11,17 +11,22 @@ class AnalysisController extends Controller
 {
     public function __construct(
         private readonly AnalyzeProblemImageUseCase $useCase,
-    ) {}
+    ) {
+    }
 
     public function analyzeProblem(AnalyzeProblemRequest $request): JsonResponse
     {
         $user = $request->user() ?? auth('sanctum')->user();
 
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
         try {
             $analysisResult = ($this->useCase)(
                 $user->id,
                 $request->file('image'),
-                $request->input('memo'),
+                $request->input('problemId'),
             );
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'RESOURCE_EXHAUSTED')) {

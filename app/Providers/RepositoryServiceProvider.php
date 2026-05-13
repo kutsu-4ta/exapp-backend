@@ -16,7 +16,9 @@ use App\Domain\Practice\PracticeSessionDraftRepositoryInterface;
 use App\Domain\Practice\PracticeSessionRepositoryInterface;
 use App\Domain\Stopwatch\StopwatchRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
+use App\Domain\Analysis\AnalysisProblemRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
+use App\Infrastructure\Repositories\EloquentAnalysisProblemRepository;
 use App\Infrastructure\Repositories\EloquentPracticeSessionDraftRepository;
 use App\Infrastructure\Repositories\EloquentPracticeSessionRepository;
 use App\Infrastructure\Repositories\EloquentStopwatchRepository;
@@ -35,6 +37,7 @@ class RepositoryServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AlertSettingRepositoryInterface::class, EloquentAlertSettingRepository::class);
+        $this->app->bind(AnalysisProblemRepositoryInterface::class, EloquentAnalysisProblemRepository::class);
         $this->app->bind(SubjectRepositoryInterface::class, EloquentSubjectRepository::class);
         $this->app->bind(MaterialRepositoryInterface::class, EloquentMaterialRepository::class);
         $this->app->bind(SubCategoryRepositoryInterface::class, EloquentSubCategoryRepository::class);
