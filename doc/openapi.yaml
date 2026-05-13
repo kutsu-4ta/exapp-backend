@@ -310,7 +310,7 @@ components:
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
-        material: { $ref: '#/components/schemas/Material' }
+        materialName: { $ref: '#/components/schemas/Material' }
         subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
         questionRef: { type: string }
         note: { type: string, nullable: true }
@@ -681,7 +681,7 @@ components:
           properties:
             questionRef:  { type: string, description: '問題番号（例: 第12問）' }
             subCategory:  { type: string, nullable: true, description: '小分類名' }
-            material:     { type: string, nullable: true, description: '教材名' }
+            materialName:     { type: string, nullable: true, description: '教材名' }
             solvedAt:     { type: string, format: date, description: '解答日' }
         back:
           type: object
