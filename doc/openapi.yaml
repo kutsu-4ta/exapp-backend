@@ -302,7 +302,7 @@ components:
 
     FailureType:
       type: string
-      enum: ['定義ミス', '解法ミス', '計算ミス']
+      enum: ['定義', '解法', 'ケアレス']
 
     Problem:
       type: object
@@ -976,7 +976,7 @@ paths:
       description: |
         以下の優先順位で苦手問題を最大5件返す。
         1. `lastTouchedAt`（最終演習日）が古い順。未演習（null）を最優先。
-        2. `failureTypes` に `定義ミス` を含むものを優先。
+        2. `failureTypes` に `定義` を含むものを優先。
       responses:
         '200':
           description: OK
@@ -2110,9 +2110,9 @@ paths:
                     studyMinutes: 480
                     problemCount: 23
                     failureStats:
-                      - { type: '定義ミス', count: 10, ratio: 0.50 }
-                      - { type: '解法ミス', count: 7,  ratio: 0.35 }
-                      - { type: '計算ミス', count: 3,  ratio: 0.15 }
+                      - { type: '定義', count: 10, ratio: 0.50 }
+                      - { type: '解法', count: 7,  ratio: 0.35 }
+                      - { type: 'ケアレス', count: 3,  ratio: 0.15 }
                     recentExamScore:
                       examYear: 2023
                       score: 68
@@ -2187,7 +2187,7 @@ paths:
 
   /morning-bugfix:
     get:
-      summary: 定義ミス復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
+      summary: 定義復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
       tags: [AI]
       description: |
         苦手問題から定義理解クイズを生成して返す汎用エンドポイント。
@@ -2196,12 +2196,12 @@ paths:
         いずれか1つでも指定した場合は Flash Bugfix モード（柔軟フィルタ）として動作する。
 
         ### Morning Bugfix モード（パラメータ未指定）
-        デフォルト: `failureType=['定義ミス']`, `limit=5`
+        デフォルト: `failureType=['定義']`, `limit=5`
 
         **3段階フォールバック:**
-        1. `last_touched_at == 昨日` かつ `定義ミス`（RANDOM）
-        2. 直近7日以内の定義ミス（昨日を除く）で補填（RANDOM）
-        3. 全期間の定義ミスを習熟度低い順（×→△→○）で補填
+        1. `last_touched_at == 昨日` かつ `定義`（RANDOM）
+        2. 直近7日以内の定義（昨日を除く）で補填（RANDOM）
+        3. 全期間の定義を習熟度低い順（×→△→○）で補填
 
         `date` パラメータを指定するとその日を「今日」とみなす（テスト用）。
 
@@ -2229,8 +2229,8 @@ paths:
           schema:
             type: array
             items: { $ref: '#/components/schemas/FailureType' }
-          description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象（Morning Bugfix デフォルト: [定義ミス]）'
-          example: ['定義ミス', '解法ミス']
+          description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象（Morning Bugfix デフォルト: [定義]）'
+          example: ['定義', '解法']
         - name: subCategoryIds
           in: query
           required: false

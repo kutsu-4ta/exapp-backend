@@ -117,7 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('gemini/settings', [GeminiSettingController::class, 'show']);
     Route::put('gemini/settings', [GeminiSettingController::class, 'update']);
 
-    // 朝の定義ミス復習
+    // 朝の定義復習
     Route::get('morning-bugfix', [MorningBugfixController::class, 'show']);
 
     // ストップウォッチ

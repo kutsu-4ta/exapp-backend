@@ -25,7 +25,7 @@ class SelectReviewProblemsUseCase
 
         // 優先順位:
         // 1. last_touched_at が古い順（NULL = 一度も演習していない → 最優先）
-        // 2. 定義ミスを含むものを優先
+        // 2. 定義を含むものを優先
         return Problem::where('user_id', $userId)
             ->where('subject_id', $subject->id)
             ->orderByRaw('last_touched_at ASC NULLS FIRST')
