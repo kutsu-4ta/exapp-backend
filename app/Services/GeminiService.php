@@ -10,15 +10,15 @@ class GeminiService
     private string $defaultApiKey;
     private string $defaultModel;
     private string $baseUrl;
-    private int    $timeout;
+    private int $timeout;
 
     public function __construct()
     {
         $this->defaultApiKey = config('services.gemini.api_key');
-        $this->defaultModel  = config('services.gemini.model', 'gemini-2.5-flash');
-        $this->baseUrl       = config('services.gemini.base_url')
+        $this->defaultModel = config('services.gemini.model', 'gemini-2.5-flash');
+        $this->baseUrl = config('services.gemini.base_url')
             ?: 'https://generativelanguage.googleapis.com/v1beta/models';
-        $this->timeout       = config('services.gemini.request_timeout', 30);
+        $this->timeout = config('services.gemini.request_timeout', 30);
     }
 
     /**
@@ -29,7 +29,8 @@ class GeminiService
         string  $userPrompt,
         ?string $apiKey = null,
         ?string $model = null
-    ): string {
+    ): string
+    {
         $json = $this->callGemini(
             contents: [
                 ['role' => 'user', 'parts' => [['text' => $userPrompt]]],
@@ -52,7 +53,8 @@ class GeminiService
         array   $responseSchema,
         ?string $apiKey = null,
         ?string $model = null
-    ): array {
+    ): array
+    {
         $json = $this->callGemini(
             contents: [
                 ['role' => 'user', 'parts' => [['text' => $userPrompt]]],
@@ -61,7 +63,7 @@ class GeminiService
             systemInstruction: $systemInstruction,
             generationConfig: [
                 'responseMimeType' => 'application/json',
-                'responseSchema'   => $responseSchema,
+                'responseSchema' => $responseSchema,
             ],
             model: $model,
         );
@@ -78,15 +80,10 @@ class GeminiService
         string  $imageBinary,
         string  $mimeType,
         string  $prompt,
-        array   $responseSchema = [],
         ?string $apiKey = null,
         ?string $model = null
-    ): array {
-        $generationConfig = ['responseMimeType' => 'application/json'];
-        if (!empty($responseSchema)) {
-            $generationConfig['responseSchema'] = $responseSchema;
-        }
-
+    ): string
+    {
         $json = $this->callGemini(
             contents: [
                 [
@@ -95,20 +92,18 @@ class GeminiService
                         [
                             'inline_data' => [
                                 'mime_type' => $mimeType,
-                                'data'      => base64_encode($imageBinary),
+                                'data' => base64_encode($imageBinary),
                             ],
                         ],
                     ],
                 ],
             ],
             apiKey: $apiKey,
-            generationConfig: $generationConfig,
+            generationConfig: [],
             model: $model,
-        );
+    );
 
-        $text = $this->extractText($json);
-
-        return $this->decodeJson($text);
+        return $this->extractText($json);
     }
 
     // ----------------------------------------------------------------
@@ -116,11 +111,11 @@ class GeminiService
     /**
      * Gemini API 共通呼び出し。
      *
-     * @param  array       $contents          Gemini contents 配列
-     * @param  string|null $apiKey            上書きキー（nullのとき環境変数デフォルト）
-     * @param  string|null $systemInstruction systemInstruction テキスト
-     * @param  array       $generationConfig  generationConfig オブジェクト
-     * @param  string|null $model             使用モデル（nullのとき環境変数デフォルト）
+     * @param array $contents Gemini contents 配列
+     * @param string|null $apiKey 上書きキー（nullのとき環境変数デフォルト）
+     * @param string|null $systemInstruction systemInstruction テキスト
+     * @param array $generationConfig generationConfig オブジェクト
+     * @param string|null $model 使用モデル（nullのとき環境変数デフォルト）
      */
     private function callGemini(
         array   $contents,
@@ -129,7 +124,7 @@ class GeminiService
         array   $generationConfig = [],
         ?string $model = null,
     ): array {
-        $key   = $apiKey ?: $this->defaultApiKey;
+        $key = $apiKey ?: $this->defaultApiKey;
         $model = $model ?: $this->defaultModel;
 
         $body = ['contents' => $contents];

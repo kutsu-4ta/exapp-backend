@@ -15,7 +15,7 @@ class AnalyzeProblemImageUseCase
 {
     public function __construct(
         private readonly GeminiService                      $gemini,
-        private readonly AnalysisProblemRepositoryInterface $analysisProblemRepository,
+        private readonly AnalysisProblemRepositoryInterface $repo,
     ) {
     }
 
@@ -42,9 +42,9 @@ class AnalyzeProblemImageUseCase
             ->implode(',');
 
         $proficiency = match ($problem->proficiency) {
-            "○" => "応用に備えたい",
-            "×△" => "正解したが不安だ",
-            default => "不正解だった",
+            "○" => "応用に備える",
+            "×△" => "正解だが不安な",
+            default => "誤答した",
         };
 
         $memoSection = $problem->note
@@ -52,52 +52,36 @@ class AnalyzeProblemImageUseCase
             : '';
 
         $prompt = <<<PROMPT
+- 挨拶等は不要
 - 私の目的は{$goal}
-- あなたはそのアシスタント。
-- この画像は{$questionNameAndNumber}。
-- {$missType}の観点で対策する必要がある。
-- {$proficiency}。
-- 答えそのものよりもコツやポイントの整理を重視して。
+- この画像は{$questionNameAndNumber}
+- {$proficiency}ため{$missType}の観点で整理したい
+- 答えよりもコツやポイントの整理を重視して
 {$memoSection}
-- 以下の JSON 形式で回答して。
-- 他のテキストは一切含めないで。
-```json
-{
-  "note": "内容",
-}
-```
 PROMPT;
 
-        $mimeType = $this->detectMimeType($image);
         $binary = file_get_contents($image->getRealPath());
 
-        $geminiToken = $dbProfile?->gemini_token;
-        $geminiModel = AiUserProfile::where('user_id', $userId)->value('gemini_model');
-
-        $json = $this->gemini->analyzeImage(
+        $ai = $this->gemini->analyzeImage(
             $binary,
-            $mimeType->value,
+            $this->mime($image)->value,
             $prompt,
-            [],
-            $geminiToken,
-            $geminiModel
+            $dbProfile->gemini_token,
+            AiUserProfile::where('user_id', $userId)->value('gemini_model')
         );
 
-        $note = is_string($json['note'] ?? null) ? $json['note'] : null;
+        $note = is_string($ai) ? $ai : null;
 
         if ($note) {
-            $this->analysisProblemRepository->updateNote($problem, $note);
+            $this->repo->updateNote($problem, $note);
         }
 
-        return [
-            'note' => $note,
-        ];
+        return ['note' => $note];
     }
 
-    private function detectMimeType(UploadedFile $image): MimeType
+    private function mime(UploadedFile $image): MimeType
     {
         return match (strtolower($image->getClientOriginalExtension())) {
-            'jpg', 'jpeg' => MimeType::IMAGE_JPEG,
             'png' => MimeType::IMAGE_PNG,
             'webp' => MimeType::IMAGE_WEBP,
             'heic' => MimeType::IMAGE_HEIC,
@@ -107,17 +91,18 @@ PROMPT;
 
     private function toServiceProfile(?UserProfileModel $db): UserProfile
     {
-        if ($db === null) {
-            return UserProfile::default();
-        }
+        $profile = UserProfile::default();
+
+        if (!$db) return $profile;
 
         return new UserProfile(
-            occupation: $db->occupation ?? UserProfile::default()->occupation,
-            goal: $db->goal ?? UserProfile::default()->goal,
-            weakAreas: $db->weak_areas ?? UserProfile::default()->weakAreas,
-            strongAreas: $db->strong_areas ?? UserProfile::default()->strongAreas,
-            interests: $db->interests ?? UserProfile::default()->interests,
-            weeklyTargetMinutes: UserProfile::default()->weeklyTargetMinutes,
+            occupation: $db->occupation ?? $profile->occupation,
+            goal: $db->goal ?? $profile->goal,
+            weakAreas: $db->weak_areas ?? $profile->weakAreas,
+            strongAreas: $db->strong_areas ?? $profile->strongAreas,
+            interests: $db->interests ?? $profile->interests,
+            weeklyTargetMinutes: $profile->weeklyTargetMinutes,
         );
     }
+
 }
