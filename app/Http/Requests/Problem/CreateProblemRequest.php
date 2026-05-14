@@ -13,17 +13,17 @@ class CreateProblemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject'        => ['required', 'string'],
-            'materialId'     => ['nullable', 'integer', 'exists:materials,id'],
-            'materialName'   => ['nullable', 'string', 'max:255'],
-            'subCategory'    => ['nullable', 'string', 'max:255'],
-            'questionRef'    => ['required', 'string', 'max:255'],
-            'note'           => ['nullable', 'string', 'max:2000'],
-            'proficiency'    => ['required', 'string', Rule::enum(Proficiency::class)],
-            'failureTypes'   => ['required', 'array'],
+            'subject' => ['required', 'string'],
+            'materialId' => ['nullable', 'integer', 'exists:materials,id'],
+            'materialName' => ['nullable', 'string', 'max:255'],
+            'subCategory' => ['nullable', 'string', 'max:255'],
+            'questionRef' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:5000'],
+            'proficiency' => ['required', 'string', Rule::enum(Proficiency::class)],
+            'failureTypes' => ['required', 'array'],
             'failureTypes.*' => ['string', Rule::enum(FailureType::class)],
             'isGoodQuestion' => ['required', 'boolean'],
-            'solvedAt'       => ['required', 'date_format:Y-m-d'],
+            'solvedAt' => ['required', 'date_format:Y-m-d'],
         ];
     }
 
