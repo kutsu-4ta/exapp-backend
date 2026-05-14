@@ -52,9 +52,9 @@ class AnalyzeProblemImageUseCase
             : '';
 
         $prompt = <<<PROMPT
-- 導入文、挨拶、冗長な言い回し等は不要
+- 導入文、締めの言葉、冗長な言い回しは不要
 - 「〜です。」等は不要
-- 私の目的は{$goal}
+- 私の目的は{$goal}（前提なので回答では触れなくてよい）
 - この画像は{$questionNameAndNumber}
 - {$proficiency}ため{$missType}の観点で整理したい
 - 1500文字程度のMarkDownで出力
