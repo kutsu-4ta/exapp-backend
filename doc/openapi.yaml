@@ -10,7 +10,7 @@ servers:
 
 # ルートレベルで認証を有効化（全体適用）
 security:
-  - bearerAuth: []
+  - bearerAuth: [ ]
 
 components:
   securitySchemes:
@@ -42,7 +42,7 @@ components:
           example:
             message: 'The given data was invalid.'
             errors:
-              field: ['フィールドは必須です。']
+              field: [ 'フィールドは必須です。' ]
 
     Conflict:
       description: リソースが既に存在する、または競合が発生した
@@ -64,15 +64,15 @@ components:
         application/json:
           schema:
             type: object
-            required: [code, message]
+            required: [ code, message ]
             properties:
-              code:    { type: string, example: 'GEMINI_QUOTA_EXCEEDED' }
+              code: { type: string, example: 'GEMINI_QUOTA_EXCEEDED' }
               message: { type: string, example: 'AIの利用上限に達しました。しばらく時間をおいてから再試行してください。' }
 
   schemas:
     StopwatchState:
       type: object
-      required: [isRunning, elapsedSeconds]
+      required: [ isRunning, elapsedSeconds ]
       properties:
         isRunning:
           type: boolean
@@ -85,28 +85,28 @@ components:
     UserProfile:
       type: object
       properties:
-        nickname:       { type: string, nullable: true }
-        occupation:     { type: string, nullable: true }
-        goal:           { type: string, nullable: true }
-        weakAreas:      { type: string, nullable: true }
-        strongAreas:    { type: string, nullable: true }
-        interests:      { type: string, nullable: true }
+        nickname: { type: string, nullable: true }
+        occupation: { type: string, nullable: true }
+        goal: { type: string, nullable: true }
+        weakAreas: { type: string, nullable: true }
+        strongAreas: { type: string, nullable: true }
+        interests: { type: string, nullable: true }
         geminiTokenSet: { type: boolean, description: '個別Geminiトークンが登録済みかどうか（トークン本体は返さない）' }
 
     UserProfileInput:
       type: object
       properties:
-        nickname:     { type: string, nullable: true, maxLength: 50 }
-        occupation:   { type: string, nullable: true, maxLength: 100 }
-        goal:         { type: string, nullable: true, maxLength: 500 }
-        weakAreas:    { type: string, nullable: true, maxLength: 500, description: '苦手科目（カンマ区切り等、自由記述）' }
-        strongAreas:  { type: string, nullable: true, maxLength: 500, description: '得意科目（カンマ区切り等、自由記述）' }
-        interests:    { type: string, nullable: true, maxLength: 500, description: '趣味・嗜好' }
-        geminiToken:  { type: string, nullable: true, maxLength: 200, description: 'ユーザー個別のGemini APIキー（保存時に暗号化）' }
+        nickname: { type: string, nullable: true, maxLength: 50 }
+        occupation: { type: string, nullable: true, maxLength: 100 }
+        goal: { type: string, nullable: true, maxLength: 500 }
+        weakAreas: { type: string, nullable: true, maxLength: 500, description: '苦手科目（カンマ区切り等、自由記述）' }
+        strongAreas: { type: string, nullable: true, maxLength: 500, description: '得意科目（カンマ区切り等、自由記述）' }
+        interests: { type: string, nullable: true, maxLength: 500, description: '趣味・嗜好' }
+        geminiToken: { type: string, nullable: true, maxLength: 200, description: 'ユーザー個別のGemini APIキー（保存時に暗号化）' }
 
     AiAdviceMode:
       type: string
-      enum: [ANALYSIS, INSPIRATION, ANALOGY, WARNING]
+      enum: [ ANALYSIS, INSPIRATION, ANALOGY, WARNING ]
       description: |
         AIアドバイスのモード。
         - ANALYSIS: 目標達成率と時間ブロック配置を論理的に分析
@@ -116,7 +116,7 @@ components:
 
     TimeSlot:
       type: string
-      enum: [morning, lunch, commute, night]
+      enum: [ morning, lunch, commute, night ]
     Subject:
       type: string
       description: ユーザーが定義した科目名
@@ -126,7 +126,7 @@ components:
 
     AlertSettings:
       type: object
-      required: [thresholdDays, includeUntouched]
+      required: [ thresholdDays, includeUntouched ]
       properties:
         thresholdDays:
           type: integer
@@ -143,7 +143,7 @@ components:
 
     SubjectMonthlyGoal:
       type: object
-      required: [year, month]
+      required: [ year, month ]
       properties:
         year: { type: integer, description: '対象年' }
         month: { type: integer, minimum: 1, maximum: 12, description: '対象月' }
@@ -151,7 +151,7 @@ components:
 
     SubCategory:
       type: object
-      required: [id, subject, name, createdAt, updatedAt]
+      required: [ id, subject, name, createdAt, updatedAt ]
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
@@ -161,14 +161,14 @@ components:
 
     SubCategoryInput:
       type: object
-      required: [subject, name]
+      required: [ subject, name ]
       properties:
         subject: { $ref: '#/components/schemas/Subject' }
         name: { type: string }
 
     MonthlySettings:
       type: object
-      required: [year, month, targetMin, targetMax]
+      required: [ year, month, targetMin, targetMax ]
       properties:
         year: { type: integer }
         month: { type: integer, minimum: 1, maximum: 12 }
@@ -177,14 +177,14 @@ components:
 
     MonthlySettingsInput:
       type: object
-      required: [targetMin, targetMax]
+      required: [ targetMin, targetMax ]
       properties:
         targetMin: { type: number, description: '月間目標下限（時間）' }
         targetMax: { type: number, description: '月間目標上限（時間）' }
 
     StudySession:
       type: object
-      required: [id, dailyLogDate, timeSlot, minutes, subject, material]
+      required: [ id, dailyLogDate, timeSlot, minutes, subject, material ]
       properties:
         id: { type: integer }
         dailyLogDate: { type: string, format: date }
@@ -199,16 +199,16 @@ components:
 
     PracticeSessionInput:
       type: object
-      required: [subject, date, totalElapsedMs, questions]
+      required: [ subject, date, totalElapsedMs, questions ]
       properties:
-        subject:        { $ref: '#/components/schemas/Subject' }
-        date:           { type: string, format: date }
+        subject: { $ref: '#/components/schemas/Subject' }
+        date: { type: string, format: date }
         totalElapsedMs: { type: integer, minimum: 0, description: '演習全体の経過時間（ミリ秒）' }
         questions:
           type: array
           items:
             type: object
-            required: [index, judgement, elapsedMs]
+            required: [ index, judgement, elapsedMs ]
             properties:
               index: { type: integer, description: '問題番号（1始まり）' }
               judgement: { type: string, description: '回答（複数設問はカンマ区切り、例: "ア,イ"）' }
@@ -224,18 +224,18 @@ components:
 
     PracticeAnswerRecord:
       type: object
-      required: [index, answers, elapsedMs]
+      required: [ index, answers, elapsedMs ]
       properties:
         index: { type: integer, description: '問題番号（1始まり）' }
         answers:
           type: array
           items:
             type: object
-            required: [answer, isDoubtful]
+            required: [ answer, isDoubtful ]
             properties:
-              answer:     { type: string, description: '選択肢（ア〜オ）または記述テキスト' }
+              answer: { type: string, description: '選択肢（ア〜オ）または記述テキスト' }
               isDoubtful: { type: boolean }
-              note:       { type: string, nullable: true, description: '選択した選択肢のメモ' }
+              note: { type: string, nullable: true, description: '選択した選択肢のメモ' }
               memos:
                 type: object
                 additionalProperties: { type: string }
@@ -244,9 +244,9 @@ components:
 
     PracticeSessionDraft:
       type: object
-      required: [subject, currentIndex, log]
+      required: [ subject, currentIndex, log ]
       properties:
-        subject:      { $ref: '#/components/schemas/Subject' }
+        subject: { $ref: '#/components/schemas/Subject' }
         currentIndex: { type: integer, minimum: 1, description: '次に解く問題番号' }
         log:
           type: array
@@ -254,16 +254,16 @@ components:
 
     PracticeSessionResult:
       type: object
-      required: [id, subject, date, totalMinutes]
+      required: [ id, subject, date, totalMinutes ]
       properties:
-        id:           { type: integer }
-        subject:      { $ref: '#/components/schemas/Subject' }
-        date:         { type: string, format: date }
+        id: { type: integer }
+        subject: { $ref: '#/components/schemas/Subject' }
+        date: { type: string, format: date }
         totalMinutes: { type: integer, description: '切り上げ後の分数（WorkspaceのStudySession作成に使用）' }
 
     StudySessionInput:
       type: object
-      required: [timeSlot, minutes, subject, material]
+      required: [ timeSlot, minutes, subject, material ]
       properties:
         timeSlot: { $ref: '#/components/schemas/TimeSlot' }
         minutes: { type: integer, minimum: 1 }
@@ -274,7 +274,7 @@ components:
 
     DailyLog:
       type: object
-      required: [date, isCompleted, studySessions]
+      required: [ date, isCompleted, studySessions ]
       properties:
         date: { type: string, format: date }
         reflection: { type: string, nullable: true }
@@ -289,7 +289,7 @@ components:
 
     DailyLogSummary:
       type: object
-      required: [date, isCompleted, totalMinutes]
+      required: [ date, isCompleted, totalMinutes ]
       properties:
         date: { type: string, format: date }
         isCompleted: { type: boolean }
@@ -298,15 +298,15 @@ components:
 
     Proficiency:
       type: string
-      enum: ['○', '△', '×']
+      enum: [ '○', '△', '×' ]
 
     FailureType:
       type: string
-      enum: ['定義', '解法', 'ケアレス']
+      enum: [ '定義', '解法', 'ケアレス' ]
 
     Problem:
       type: object
-      required: [id, subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt, createdAt, updatedAt]
+      required: [ id, subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt, createdAt, updatedAt ]
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
@@ -318,36 +318,36 @@ components:
         proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
-        solvedAt:        { type: string, format: date }
-        lastTouchedAt:   { type: string, format: date-time, nullable: true, description: '直近にレビュー（今日の5問で確認）した日時。PUT /problems/:id で自動更新される' }
-        createdAt:       { type: string, format: date-time }
-        updatedAt:       { type: string, format: date-time }
+        solvedAt: { type: string, format: date }
+        lastTouchedAt: { type: string, format: date-time, nullable: true, description: '直近にレビュー（今日の5問で確認）した日時。PUT /problems/:id で自動更新される' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     ProblemInput:
       type: object
-      required: [subject, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt]
+      required: [ subject, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt ]
       description: |
         `materialId` と `materialName` のどちらか一方が必須。
         - `materialId` が指定された場合は既存の教材を使用する。
         - `materialId` が null で `materialName` が指定された場合は新規作成する。
       properties:
-        subject:      { $ref: '#/components/schemas/Subject' }
-        materialId:   { type: integer, nullable: true, description: '既存教材の ID（materialName と排他）' }
+        subject: { $ref: '#/components/schemas/Subject' }
+        materialId: { type: integer, nullable: true, description: '既存教材の ID（materialName と排他）' }
         materialName: { type: string,  nullable: true, maxLength: 255, description: '新規作成する教材名（materialId と排他）' }
-        subCategory:  { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
-        questionRef:  { type: string }
-        note:         { type: string, nullable: true }
+        subCategory: { type: string, nullable: true, description: '小分類名（未登録なら自動登録）' }
+        questionRef: { type: string }
+        note: { type: string, nullable: true }
         defeatReason: { type: string, nullable: true, maxLength: 255, description: '敗因（ひとことメモ）' }
-        proficiency:  { $ref: '#/components/schemas/Proficiency' }
+        proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
-        solvedAt:     { type: string, format: date }
+        solvedAt: { type: string, format: date }
 
     DashboardStats:
       type: object
-      required: [thisWeekTotalMinutes, allTotalMinutes, thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, allSubjectMinutes, lastTouchedBySubject, dailyMinutes]
+      required: [ thisWeekTotalMinutes, allTotalMinutes, thisMonthMinutes, thisMonthDays, last7DaysMinutes, weeklyAvgMinutes, subjectMinutes, allSubjectMinutes, lastTouchedBySubject, dailyMinutes ]
       properties:
-        thisWeekTotalMinutes: { type: integer}
+        thisWeekTotalMinutes: { type: integer }
         currentStreak: { type: integer }
         allTotalMinutes: { type: integer }
         allTotalDays: { type: integer }
@@ -359,7 +359,7 @@ components:
           type: array
           items:
             type: object
-            required: [subject, minutes]
+            required: [ subject, minutes ]
             properties:
               subject: { type: string }
               minutes: { type: integer }
@@ -367,7 +367,7 @@ components:
           type: array
           items:
             type: object
-            required: [subject, minutes]
+            required: [ subject, minutes ]
             properties:
               subject: { type: string }
               minutes: { type: integer }
@@ -375,7 +375,7 @@ components:
           type: array
           items:
             type: object
-            required: [subject, lastDate]
+            required: [ subject, lastDate ]
             properties:
               subject: { type: string }
               lastDate: { type: string, format: date, nullable: true }
@@ -383,14 +383,14 @@ components:
           type: array
           items:
             type: object
-            required: [date, minutes]
+            required: [ date, minutes ]
             properties:
               date: { type: string, format: date }
               minutes: { type: integer }
 
     SubjectActivityDay:
       type: object
-      required: [date, studyMinutes, problemCount]
+      required: [ date, studyMinutes, problemCount ]
       properties:
         date: { type: string, format: date, description: '対象日（YYYY-MM-DD）' }
         studyMinutes: { type: integer, description: 'その日の該当科目の学習時間（分）' }
@@ -399,7 +399,7 @@ components:
     GeminiContextSubject:
       type: object
       description: 科目ごとのGeminiコピー用詳細データ
-      required: [subject, studyMinutes, problemCount, failureStats]
+      required: [ subject, studyMinutes, problemCount, failureStats ]
       properties:
         subject:
           type: string
@@ -422,25 +422,25 @@ components:
           description: 'ミスの種類別の件数と割合（問題あたりの failureTypes をカウント）'
           items:
             type: object
-            required: [type, count, ratio]
+            required: [ type, count, ratio ]
             properties:
-              type:  { $ref: '#/components/schemas/FailureType' }
+              type: { $ref: '#/components/schemas/FailureType' }
               count: { type: integer, description: '該当ミス種別の件数' }
               ratio: { type: number, format: float, minimum: 0, maximum: 1, description: '全ミス件数に対する割合（0.0〜1.0）' }
         recentExamScore:
           type: object
           nullable: true
           description: '直近の完了済み過去問スコア。未実施なら null'
-          required: [examYear, score]
+          required: [ examYear, score ]
           properties:
-            examYear:    { type: integer, description: '過去問の年度' }
-            score:       { type: integer, description: '獲得点数（is_correct=true の point 合計）' }
+            examYear: { type: integer, description: '過去問の年度' }
+            score: { type: integer, description: '獲得点数（is_correct=true の point 合計）' }
             completedAt: { type: string, format: date, nullable: true, description: '完了日' }
 
     GeminiContextDailyLog:
       type: object
       description: '直近7日間の日別学習サマリ'
-      required: [date, studyMinutes]
+      required: [ date, studyMinutes ]
       properties:
         date:
           type: string
@@ -459,7 +459,7 @@ components:
       description: |
         Geminiコピー用の集約コンテキスト。
         ダッシュボード統計・プロフィール・直近7日ログ・全科目詳細を1リクエストで返す。
-      required: [year, month, profile, dashboard, recentDailyLogs, subjects]
+      required: [ year, month, profile, dashboard, recentDailyLogs, subjects ]
       properties:
         year:
           type: integer
@@ -473,9 +473,9 @@ components:
           type: object
           description: 'ユーザープロフィール（user_profiles から取得）'
           properties:
-            occupation:  { type: string, nullable: true, description: '職業' }
-            goal:        { type: string, nullable: true, description: '学習目標' }
-            weakAreas:   { type: string, nullable: true, description: '苦手分野' }
+            occupation: { type: string, nullable: true, description: '職業' }
+            goal: { type: string, nullable: true, description: '学習目標' }
+            weakAreas: { type: string, nullable: true, description: '苦手分野' }
             strongAreas: { type: string, nullable: true, description: '得意分野' }
         dashboard:
           $ref: '#/components/schemas/DashboardStats'
@@ -493,34 +493,34 @@ components:
 
     MorningQuizItem:
       type: object
-      required: [id, subject, problem_context, quiz]
+      required: [ id, subject, problem_context, quiz ]
       properties:
-        id:           { type: integer }
-        subject:      { type: string }
+        id: { type: integer }
+        subject: { type: string }
         sub_category: { type: string, nullable: true }
         problem_context:
           type: object
           properties:
             original_ref: { type: string, nullable: true }
-            user_memo:    { type: string, nullable: true }
+            user_memo: { type: string, nullable: true }
         quiz:
           type: object
           nullable: true
           properties:
-            question:      { type: string }
-            options:       { type: array, items: { type: string } }
+            question: { type: string }
+            options: { type: array, items: { type: string } }
             correct_index: { type: integer, minimum: 0, maximum: 3 }
-            explanation:   { type: string }
+            explanation: { type: string }
         last_touched_at: { type: string, format: date, nullable: true }
 
     TouchedOrder:
       type: string
-      enum: [recent, old]
+      enum: [ recent, old ]
       description: 'recent: 最近触れた問題を優先 / old: 長く触れていない問題を優先'
 
     MorningBugfixSession:
       type: object
-      required: [session_id, meta, questions]
+      required: [ session_id, meta, questions ]
       properties:
         session_id: { type: string, example: 'morning_bugfix_20260512' }
         meta:
@@ -529,7 +529,7 @@ components:
             total_questions: { type: integer }
             strategy:
               type: string
-              enum: [definition_focused, flash_bugfix]
+              enum: [ definition_focused, flash_bugfix ]
               description: 'definition_focused: Morning Bugfix / flash_bugfix: Flash Bugfix（subjectPage発）'
         questions:
           type: array
@@ -537,7 +537,7 @@ components:
 
     Error:
       type: object
-      required: [message]
+      required: [ message ]
       properties:
         message: { type: string }
         errors:
@@ -550,17 +550,17 @@ components:
 
     Rank:
       type: string
-      enum: [A, B, C, D, E]
+      enum: [ A, B, C, D, E ]
       description: 問題の重要度ランク（A=最重要〜E=低優先）
 
     ExamSessionStatus:
       type: string
-      enum: [in_progress, scoring, completed]
+      enum: [ in_progress, scoring, completed ]
       description: 'in_progress: 解答中, scoring: 自己採点中, completed: 完了'
 
     ExamQuestion:
       type: object
-      required: [id, examSessionId, sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point]
+      required: [ id, examSessionId, sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point ]
       properties:
         id: { type: integer }
         examSessionId: { type: integer }
@@ -570,8 +570,8 @@ components:
         hasChildren: { type: boolean, description: '小問を持つ親問かどうか' }
         rank: { $ref: '#/components/schemas/Rank' }
         myAnswer: { type: string, nullable: true, description: 'ア〜オ または記述解答（未回答時はnull）' }
-        answeredTimeMs:     { type: integer, nullable: true, description: 'サーバー確定の回答時間（ミリ秒）' }
-        answeredStartedAt:  { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
+        answeredTimeMs: { type: integer, nullable: true, description: 'サーバー確定の回答時間（ミリ秒）' }
+        answeredStartedAt: { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
         answeredFinishedAt: { type: string, format: date-time, nullable: true, description: '回答確定時刻（UTC ISO8601）' }
         isCorrect: { type: boolean, nullable: true, description: '正誤（null=未採点）' }
         isDoubtful: { type: boolean, description: '要復習フラグ' }
@@ -580,7 +580,7 @@ components:
 
     ExamQuestionInput:
       type: object
-      required: [sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point]
+      required: [ sortOrder, displayId, isSub, hasChildren, rank, isDoubtful, point ]
       description: |
         試験完了時に送信する問題データ。
         `answeredStartedAt` と `answeredFinishedAt` を両方送ると、サーバーが `answeredTimeMs` を計算する。
@@ -596,13 +596,13 @@ components:
         isDoubtful: { type: boolean }
         point: { type: integer }
         note: { type: string, nullable: true }
-        answeredTimeMs:     { type: integer, nullable: true, description: 'フォールバック用（タイムスタンムがある場合はサーバーが上書き計算）' }
-        answeredStartedAt:  { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
+        answeredTimeMs: { type: integer, nullable: true, description: 'フォールバック用（タイムスタンムがある場合はサーバーが上書き計算）' }
+        answeredStartedAt: { type: string, format: date-time, nullable: true, description: '回答開始時刻（UTC ISO8601）' }
         answeredFinishedAt: { type: string, format: date-time, nullable: true, description: '回答確定時刻（UTC ISO8601）' }
 
     ExamSession:
       type: object
-      required: [id, subject, examYear, status, questions, totalScore, pureScore, correctCount, incorrectCount, doubtfulCount, createdAt]
+      required: [ id, subject, examYear, status, questions, totalScore, pureScore, correctCount, incorrectCount, doubtfulCount, createdAt ]
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
@@ -621,7 +621,7 @@ components:
 
     ExamSessionSummary:
       type: object
-      required: [id, subject, examYear, totalScore, pureScore, createdAt]
+      required: [ id, subject, examYear, totalScore, pureScore, createdAt ]
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
@@ -633,7 +633,7 @@ components:
 
     ExamMistakeNote:
       type: object
-      required: [questionId, sessionId, examYear, displayId, rank, note, isDoubtful, completedAt]
+      required: [ questionId, sessionId, examYear, displayId, rank, note, isDoubtful, completedAt ]
       properties:
         questionId: { type: integer }
         sessionId: { type: integer }
@@ -646,7 +646,7 @@ components:
 
     ExamRankStat:
       type: object
-      required: [rank, correctRate, count]
+      required: [ rank, correctRate, count ]
       properties:
         rank: { $ref: '#/components/schemas/Rank' }
         correctRate: { type: number, format: float, minimum: 0, maximum: 1 }
@@ -654,7 +654,7 @@ components:
 
     ExamSubjectStats:
       type: object
-      required: [subject, sessionCount, avgTotalScore, avgPureScore, rankStats, recentMistakes]
+      required: [ subject, sessionCount, avgTotalScore, avgPureScore, rankStats, recentMistakes ]
       properties:
         subject: { $ref: '#/components/schemas/Subject' }
         sessionCount: { type: integer }
@@ -670,26 +670,26 @@ components:
 
     Flashcard:
       type: object
-      required: [id, front, back]
+      required: [ id, front, back ]
       properties:
         id: { type: integer }
         lastTouchedAt: { type: string, format: date, nullable: true, description: '最終演習日（未演習はnull）' }
         subject: { $ref: '#/components/schemas/Subject' }
         front:
           type: object
-          required: [questionRef, solvedAt]
+          required: [ questionRef, solvedAt ]
           properties:
-            questionRef:  { type: string, description: '問題番号（例: 第12問）' }
-            subCategory:  { type: string, nullable: true, description: '小分類名' }
-            materialName:     { type: string, nullable: true, description: '教材名' }
-            solvedAt:     { type: string, format: date, description: '解答日' }
+            questionRef: { type: string, description: '問題番号（例: 第12問）' }
+            subCategory: { type: string, nullable: true, description: '小分類名' }
+            materialName: { type: string, nullable: true, description: '教材名' }
+            solvedAt: { type: string, format: date, description: '解答日' }
         back:
           type: object
-          required: [proficiency, failureTypes, isGoodQuestion]
+          required: [ proficiency, failureTypes, isGoodQuestion ]
           properties:
-            note:           { type: string, nullable: true, description: '復習ノート（解法パターン・判断軸）' }
-            proficiency:    { $ref: '#/components/schemas/Proficiency' }
-            failureTypes:   { type: array, items: { $ref: '#/components/schemas/FailureType' } }
+            note: { type: string, nullable: true, description: '復習ノート（解法パターン・判断軸）' }
+            proficiency: { $ref: '#/components/schemas/Proficiency' }
+            failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
             isGoodQuestion: { type: boolean }
 
 
@@ -699,7 +699,7 @@ paths:
   /stopwatch:
     get:
       summary: ストップウォッチの現在状態を取得
-      tags: [Stopwatch]
+      tags: [ Stopwatch ]
       description: |
         `is_running = true` の場合、`elapsed_seconds` には
         `保存済み累積秒数 + (現在時刻 - started_at)` を加算した値を返す。
@@ -716,7 +716,7 @@ paths:
   /stopwatch/start:
     post:
       summary: ストップウォッチを開始
-      tags: [Stopwatch]
+      tags: [ Stopwatch ]
       description: |
         `is_running = true` にして `started_at` をサーバー現在時刻で記録する。
         すでに計測中の場合は **409 Conflict** を返す。
@@ -735,7 +735,7 @@ paths:
   /stopwatch/stop:
     post:
       summary: ストップウォッチを停止
-      tags: [Stopwatch]
+      tags: [ Stopwatch ]
       description: |
         `elapsed_seconds += (現在時刻 - started_at)` を加算し、
         `is_running = false`、`started_at = null` にする。
@@ -752,7 +752,7 @@ paths:
   /stopwatch/reset:
     post:
       summary: ストップウォッチをリセット
-      tags: [Stopwatch]
+      tags: [ Stopwatch ]
       description: |
         `elapsed_seconds = 0`、`is_running = false`、`started_at = null` にリセットする。
         計測中・停止中いずれの状態でもリセット可能。
@@ -770,7 +770,7 @@ paths:
   /subjects:
     get:
       summary: 科目一覧を取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       responses:
         '200':
           description: OK
@@ -791,7 +791,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 科目設定を取得（最終目標など月によらない設定）
-      tags: [Subjects]
+      tags: [ Subjects ]
       responses:
         '200':
           description: OK
@@ -804,7 +804,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       summary: 科目設定を保存
-      tags: [Subjects]
+      tags: [ Subjects ]
       requestBody:
         required: true
         content:
@@ -840,7 +840,7 @@ paths:
         schema: { type: integer, minimum: 1, maximum: 12 }
     get:
       summary: 科目の月別方針を取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       responses:
         '200':
           description: OK
@@ -853,7 +853,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       summary: 科目の月別方針を保存
-      tags: [Subjects]
+      tags: [ Subjects ]
       requestBody:
         required: true
         content:
@@ -886,14 +886,14 @@ paths:
       summary: 科目名を変更
       description: |
         科目名を変更する。関連するすべてのデータ（学習記録・苦手問題・試験記録）のリレーションが保持される。
-      tags: [Subjects]
+      tags: [ Subjects ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [newName]
+              required: [ newName ]
               properties:
                 newName: { type: string, description: '新しい科目名' }
       responses:
@@ -917,7 +917,7 @@ paths:
       summary: 科目を削除（カスケード）
       description: |
         科目を削除する。この科目に紐づく学習記録・苦手問題・試験記録もすべて削除される。
-      tags: [Subjects]
+      tags: [ Subjects ]
       responses:
         '204':
           description: 削除成功
@@ -935,7 +935,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 科目の日別アクティビティを取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       description: |
         指定月の全日付について、該当科目の学習時間と苦手問題追加数を返す。
         学習記録がない日は studyMinutes: 0、問題追加がない日は problemCount: 0 として返す。
@@ -972,7 +972,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 今解くべき5問を取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       description: |
         以下の優先順位で苦手問題を最大5件返す。
         1. `lastTouchedAt`（最終演習日）が古い順。未演習（null）を最優先。
@@ -993,7 +993,7 @@ paths:
   /flashcards:
     get:
       summary: フラッシュカード一覧を取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       description: |
         苦手問題をフラッシュカード形式で返す。`subject` を指定した場合はその科目のみ、
         省略した場合は全科目を返す。選択アルゴリズムは戦略パターンで差し替え可能。
@@ -1029,7 +1029,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 科目別フラッシュカード一覧を取得
-      tags: [Subjects]
+      tags: [ Subjects ]
       description: |
         指定科目の苦手問題をフラッシュカード形式で返す。
         - **表（front）**: 問題番号・小分類・教材・解答日
@@ -1066,7 +1066,7 @@ paths:
   /materials:
     get:
       summary: 教材一覧を取得
-      tags: [Materials]
+      tags: [ Materials ]
       responses:
         '200':
           description: OK
@@ -1087,14 +1087,14 @@ paths:
         description: URLエンコードされた教材名
     put:
       summary: 教材名を変更
-      tags: [Materials]
+      tags: [ Materials ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [newName]
+              required: [ newName ]
               properties:
                 newName: { type: string, description: '新しい教材名' }
       responses:
@@ -1118,7 +1118,7 @@ paths:
       summary: 教材を削除
       description: |
         教材を削除する。この教材が紐づく学習記録・苦手問題の material フィールドは空文字列に更新される。
-      tags: [Materials]
+      tags: [ Materials ]
       responses:
         '204':
           description: 削除成功
@@ -1132,7 +1132,7 @@ paths:
   /alert-settings:
     get:
       summary: アラート設定を取得
-      tags: [Alert Settings]
+      tags: [ Alert Settings ]
       description: ユーザーのアラート通知設定を返す。未設定の場合はデフォルト値を返す。
       responses:
         '200':
@@ -1144,7 +1144,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       summary: アラート設定を保存
-      tags: [Alert Settings]
+      tags: [ Alert Settings ]
       requestBody:
         required: true
         content:
@@ -1166,7 +1166,7 @@ paths:
   /sub-categories:
     get:
       summary: 小分類一覧を取得
-      tags: [Sub Categories]
+      tags: [ Sub Categories ]
       parameters:
         - name: subject
           in: query
@@ -1185,7 +1185,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       summary: 小分類を追加
-      tags: [Sub Categories]
+      tags: [ Sub Categories ]
       requestBody:
         required: true
         content:
@@ -1210,7 +1210,7 @@ paths:
         schema: { type: integer }
     put:
       summary: 小分類を更新
-      tags: [Sub Categories]
+      tags: [ Sub Categories ]
       requestBody:
         required: true
         content:
@@ -1230,7 +1230,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 小分類を削除
-      tags: [Sub Categories]
+      tags: [ Sub Categories ]
       responses:
         '204':
           description: 削除成功
@@ -1253,7 +1253,7 @@ paths:
         schema: { type: integer, minimum: 1, maximum: 12 }
     get:
       summary: 月間設定を取得
-      tags: [Monthly Settings]
+      tags: [ Monthly Settings ]
       description: 指定した年月の目標設定を返す。未設定の場合はデフォルト値を返す。
       responses:
         '200':
@@ -1265,7 +1265,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       summary: 月間設定を保存
-      tags: [Monthly Settings]
+      tags: [ Monthly Settings ]
       requestBody:
         required: true
         content:
@@ -1287,7 +1287,7 @@ paths:
   /daily-logs:
     get:
       summary: 月間ログ一覧を取得
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       parameters:
         - name: year
           in: query
@@ -1311,14 +1311,14 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     post:
       summary: デイリーログを作成
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [date]
+              required: [ date ]
               properties:
                 date: { type: string, format: date }
       responses:
@@ -1341,7 +1341,7 @@ paths:
   /daily-logs/recent:
     get:
       summary: 直近のログ一覧を取得（カーソルベースページネーション）
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       parameters:
         - name: limit
           in: query
@@ -1372,7 +1372,7 @@ paths:
         schema: { type: string, format: date }
     get:
       summary: 特定日のログを取得
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       responses:
         '200':
           description: OK
@@ -1389,7 +1389,7 @@ paths:
               example: { message: '指定された日付のログが見つかりません。' }
     put:
       summary: 振り返りテキストを更新
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       requestBody:
         required: true
         content:
@@ -1411,7 +1411,7 @@ paths:
     delete:
       summary: デイリーログを削除
       description: 指定日のデイリーログとそれに紐づく学習セッションをすべて削除する。
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       responses:
         '204':
           description: 削除成功
@@ -1428,7 +1428,7 @@ paths:
         schema: { type: string, format: date }
     post:
       summary: デイリーログを完了にする
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       responses:
         '200':
           description: 完了成功
@@ -1448,7 +1448,7 @@ paths:
         schema: { type: string, format: date }
     post:
       summary: デイリーログの完了を取り消す
-      tags: [Daily Logs]
+      tags: [ Daily Logs ]
       responses:
         '200':
           description: 取り消し成功
@@ -1463,7 +1463,7 @@ paths:
   /study-sessions:
     post:
       summary: 学習ブロックを追加
-      tags: [Study Sessions]
+      tags: [ Study Sessions ]
       requestBody:
         required: true
         content:
@@ -1472,7 +1472,7 @@ paths:
               allOf:
                 - $ref: '#/components/schemas/StudySessionInput'
                 - type: object
-                  required: [dailyLogDate]
+                  required: [ dailyLogDate ]
                   properties:
                     dailyLogDate: { type: string, format: date }
       responses:
@@ -1500,7 +1500,7 @@ paths:
         schema: { type: integer }
     put:
       summary: 学習ブロックを更新
-      tags: [Study Sessions]
+      tags: [ Study Sessions ]
       requestBody:
         required: true
         content:
@@ -1520,7 +1520,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 学習ブロックを削除
-      tags: [Study Sessions]
+      tags: [ Study Sessions ]
       responses:
         '204':
           description: 削除成功
@@ -1532,7 +1532,7 @@ paths:
   /problems:
     get:
       summary: 苦手問題一覧を取得
-      tags: [Problems]
+      tags: [ Problems ]
       parameters:
         - name: limit
           in: query
@@ -1568,7 +1568,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       summary: 苦手問題を追加
-      tags: [Problems]
+      tags: [ Problems ]
       requestBody:
         required: true
         content:
@@ -1593,7 +1593,7 @@ paths:
         schema: { type: integer }
     get:
       summary: 苦手問題を1件取得
-      tags: [Problems]
+      tags: [ Problems ]
       responses:
         '200':
           description: OK
@@ -1606,7 +1606,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       summary: 苦手問題を更新
-      tags: [Problems]
+      tags: [ Problems ]
       requestBody:
         required: true
         content:
@@ -1626,7 +1626,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 苦手問題を削除
-      tags: [Problems]
+      tags: [ Problems ]
       responses:
         '204':
           description: 削除成功
@@ -1643,7 +1643,7 @@ paths:
         schema: { type: integer }
     post:
       summary: 苦手問題の最終演習日を今日に更新
-      tags: [Problems]
+      tags: [ Problems ]
       description: |
         `lastTouchedAt` を今日の日付に更新する。
         科目詳細の「今解くべき5問」を演習したあとに呼び出す。
@@ -1661,7 +1661,7 @@ paths:
   /dashboard/stats:
     get:
       summary: ダッシュボード集計データを取得
-      tags: [Dashboard]
+      tags: [ Dashboard ]
       responses:
         '200':
           description: OK
@@ -1676,7 +1676,7 @@ paths:
   /exam-sessions:
     get:
       summary: 試験セッション一覧を取得
-      tags: [Exam]
+      tags: [ Exam ]
       parameters:
         - name: status
           in: query
@@ -1700,14 +1700,14 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       summary: 試験セッションを作成
-      tags: [Exam]
+      tags: [ Exam ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [subject, examYear]
+              required: [ subject, examYear ]
               properties:
                 subject: { $ref: '#/components/schemas/Subject' }
                 examYear: { type: string, example: 'R07' }
@@ -1730,7 +1730,7 @@ paths:
         schema: { type: integer }
     get:
       summary: 試験セッション詳細を取得
-      tags: [Exam]
+      tags: [ Exam ]
       responses:
         '200':
           description: OK
@@ -1743,7 +1743,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       summary: 試験セッションのメタデータを更新
-      tags: [Exam]
+      tags: [ Exam ]
       description: subject・examYear の編集に使用。status の直接変更も可能（scoring への変更など）。
       requestBody:
         required: true
@@ -1769,7 +1769,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 試験セッションを削除
-      tags: [Exam]
+      tags: [ Exam ]
       responses:
         '204':
           description: 削除成功
@@ -1786,7 +1786,7 @@ paths:
         schema: { type: integer }
     post:
       summary: 試験を完了として保存
-      tags: [Exam]
+      tags: [ Exam ]
       description: |
         解答・採点データを一括登録し、ステータスを completed に変更する。
         既存の questions は全て置き換えられる。
@@ -1796,7 +1796,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [subject, examYear, questions]
+              required: [ subject, examYear, questions ]
               properties:
                 subject: { $ref: '#/components/schemas/Subject' }
                 examYear: { type: string }
@@ -1830,7 +1830,7 @@ paths:
         description: 問題の表示順（0始まり）
     patch:
       summary: 問題の回答タイムスタンプを更新（中間記録）
-      tags: [Exam]
+      tags: [ Exam ]
       description: |
         問題の表示開始（`event: "start"`）または回答確定（`event: "finish"`）を記録する。
 
@@ -1848,20 +1848,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [event]
+              required: [ event ]
               properties:
                 event:
                   type: string
-                  enum: [start, finish]
+                  enum: [ start, finish ]
                   description: '`start` = 問題表示、`finish` = 回答確定'
                 displayId:
                   type: string
                   description: 問題の表示 ID（初回のみ使用）
-                isSub:       { type: boolean }
+                isSub: { type: boolean }
                 hasChildren: { type: boolean }
-                rank:        { $ref: '#/components/schemas/Rank' }
-                isDoubtful:  { type: boolean }
-                point:       { type: integer, minimum: 0 }
+                rank: { $ref: '#/components/schemas/Rank' }
+                isDoubtful: { type: boolean }
+                point: { type: integer, minimum: 0 }
             examples:
               start:
                 summary: 問題表示時
@@ -1893,7 +1893,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 科目別の分析データを取得
-      tags: [Exam]
+      tags: [ Exam ]
       description: |
         指定科目のランク別正答率と直近のミスメモ（note があるもの）を返す。
         year/month を指定するとその月に completedAt がある試験セッションだけを集計する。
@@ -1920,15 +1920,15 @@ paths:
   /auth/google:
     post:
       summary: Googleログイン（Firebase ID Token検証）
-      tags: [Auth]
-      security: []
+      tags: [ Auth ]
+      security: [ ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [id_token]
+              required: [ id_token ]
               properties:
                 id_token: { type: string, description: 'Firebase ID Token' }
       responses:
@@ -1938,12 +1938,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [token, user]
+                required: [ token, user ]
                 properties:
                   token: { type: string, description: 'アクセストークン（Bearer）' }
                   user:
                     type: object
-                    required: [id, name, email]
+                    required: [ id, name, email ]
                     properties:
                       id: { type: integer }
                       name: { type: string }
@@ -1958,15 +1958,15 @@ paths:
   /auth/refresh:
     post:
       summary: トークンリフレッシュ
-      tags: [Auth]
-      security: []
+      tags: [ Auth ]
+      security: [ ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [refresh_token]
+              required: [ refresh_token ]
               properties:
                 refresh_token: { type: string, description: 'Firebase リフレッシュトークン' }
       responses:
@@ -1976,7 +1976,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [token]
+                required: [ token ]
                 properties:
                   token: { type: string, description: '新しいアクセストークン（Bearer）' }
         '401':
@@ -1989,9 +1989,9 @@ paths:
   /auth/me:
     get:
       summary: 認証済みユーザー情報取得
-      tags: [Auth]
+      tags: [ Auth ]
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: ユーザー情報
@@ -1999,7 +1999,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [id, name, email]
+                required: [ id, name, email ]
                 properties:
                   id: { type: integer }
                   name: { type: string }
@@ -2012,7 +2012,7 @@ paths:
   /profile:
     get:
       summary: プロフィール取得
-      tags: [Profile]
+      tags: [ Profile ]
       responses:
         '200':
           description: OK
@@ -2023,7 +2023,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       summary: プロフィール更新（upsert）
-      tags: [Profile]
+      tags: [ Profile ]
       requestBody:
         required: true
         content:
@@ -2053,7 +2053,7 @@ paths:
   /gemini/context:
     get:
       summary: Geminiコピー用コンテキストデータを取得
-      tags: [AI]
+      tags: [ AI ]
       description: |
         ダッシュボード統計・プロフィール・直近7日ログ・全科目詳細をまとめて返す。
         フロントエンドがGemini向けプロンプトを組み立てる際に使用する。
@@ -2123,7 +2123,7 @@ paths:
   /gemini/settings:
     get:
       summary: Gemini設定を取得
-      tags: [AI]
+      tags: [ AI ]
       description: ユーザーが設定した使用モデル名を返す。未設定の場合は `geminiModel` が `null`。
       responses:
         '200':
@@ -2132,7 +2132,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [geminiModel]
+                required: [ geminiModel ]
                 properties:
                   geminiModel:
                     type: string
@@ -2144,7 +2144,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       summary: Gemini設定を更新
-      tags: [AI]
+      tags: [ AI ]
       description: |
         使用モデル名を保存する。`ai_user_profiles` に upsert される。
         設定後の Gemini 呼び出し（AIアドバイス・画像解析・朝の復習）すべてにこのモデルが使用される。
@@ -2155,7 +2155,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [geminiModel]
+              required: [ geminiModel ]
               properties:
                 geminiModel:
                   type: string
@@ -2170,7 +2170,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [geminiModel]
+                required: [ geminiModel ]
                 properties:
                   geminiModel:
                     type: string
@@ -2188,7 +2188,7 @@ paths:
   /morning-bugfix:
     get:
       summary: 定義復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
-      tags: [AI]
+      tags: [ AI ]
       description: |
         苦手問題から定義理解クイズを生成して返す汎用エンドポイント。
         新パラメータ（`failureType`, `subCategoryIds`, `touchedOrder`, `proficiency`, `limit`）を
@@ -2230,7 +2230,7 @@ paths:
             type: array
             items: { $ref: '#/components/schemas/FailureType' }
           description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象（Morning Bugfix デフォルト: [定義]）'
-          example: ['定義', '解法']
+          example: [ '定義', '解法' ]
         - name: subCategoryIds
           in: query
           required: false
@@ -2240,7 +2240,7 @@ paths:
             type: array
             items: { type: integer }
           description: '小分類IDフィルタ（複数選択可）。未指定なら全小分類対象'
-          example: [12, 15]
+          example: [ 12, 15 ]
         - name: touchedOrder
           in: query
           required: false
@@ -2262,7 +2262,7 @@ paths:
             type: array
             items: { $ref: '#/components/schemas/Proficiency' }
           description: '習熟度フィルタ（複数選択可）。未指定なら △/× のみ'
-          example: ['△', '×']
+          example: [ '△', '×' ]
         - name: subject
           in: query
           required: false
@@ -2288,7 +2288,7 @@ paths:
                         problem_context: { original_ref: '2023年 第12問', user_memo: 'PPM の定義' }
                         quiz:
                           question: '次のうちPPMにおける「花形」の定義として正しいものはどれか？'
-                          options: ['高シェア・高成長', '低シェア・高成長', '高シェア・低成長', '低シェア・低成長']
+                          options: [ '高シェア・高成長', '低シェア・高成長', '高シェア・低成長', '低シェア・低成長' ]
                           correct_index: 0
                           explanation: '花形は市場成長率・市場シェアともに高い事業...'
                         last_touched_at: '2026-05-11'
@@ -2297,7 +2297,7 @@ paths:
                   value:
                     session_id: 'flash_bugfix_20260512'
                     meta: { total_questions: 5, strategy: 'flash_bugfix' }
-                    questions: []
+                    questions: [ ]
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
@@ -2312,7 +2312,7 @@ paths:
   /ai/advice:
     post:
       summary: AIアドバイスを生成
-      tags: [AI]
+      tags: [ AI ]
       description: |
         ユーザーの学習ログ・苦手問題・目標データをもとに Gemini API を呼び出し、
         モード別のアドバイスを生成して返す。
@@ -2329,7 +2329,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [mode]
+              required: [ mode ]
               properties:
                 mode:
                   $ref: '#/components/schemas/AiAdviceMode'
@@ -2347,7 +2347,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [advice]
+                required: [ advice ]
                 properties:
                   advice:
                     type: string
@@ -2360,7 +2360,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-              example: { message: 'The given data was invalid.', errors: { mode: ['modeは ANALYSIS, INSPIRATION, ANALOGY, WARNING のいずれかを指定してください。'] } }
+              example: { message: 'The given data was invalid.', errors: { mode: [ 'modeは ANALYSIS, INSPIRATION, ANALOGY, WARNING のいずれかを指定してください。' ] } }
         '429':
           $ref: '#/components/responses/GeminiQuotaExceeded'
         '503':
@@ -2369,21 +2369,17 @@ paths:
   /ai/analysis:
     post:
       summary: 問題画像を解析して苦手問題に登録
-      tags: [AI]
+      tags: [ AI ]
       description: |
         アップロードされた試験問題の画像を Gemini 1.5 Flash でマルチモーダル解析し、
-        科目・問題番号・要点・失敗タイプを自動抽出して苦手問題 (Problem) として保存する。
-
-        - 習熟度は `×`（未習得）で固定
-        - `solved_at` は本日の日付
-        - 科目が未登録の場合は自動作成
+        苦手問題 (Problem)のメタ情報を補足要素として解説画像を読み取り、noteに保存する。
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required: [image]
+              required: [ image, problemId ]
               properties:
                 image:
                   type: string
@@ -2408,7 +2404,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-              example: { message: 'The given data was invalid.', errors: { image: ['画像ファイルは必須です。'] } }
+              example: { message: 'The given data was invalid.', errors: { image: [ '画像ファイルは必須です。' ] } }
         '429':
           $ref: '#/components/responses/GeminiQuotaExceeded'
         '500':
@@ -2425,7 +2421,7 @@ paths:
   /practice/sessions/draft:
     put:
       summary: 演習ドラフトを保存（途中再開用）
-      tags: [Practice]
+      tags: [ Practice ]
       description: |
         演習途中の状態を保存する。同一科目のドラフトが存在する場合は上書きする。
         フロントエンドは回答のたびに呼び出すことで、アプリ終了後の再開を可能にする。
@@ -2451,7 +2447,7 @@ paths:
         description: URLエンコードされた科目名
     get:
       summary: 演習ドラフトを取得
-      tags: [Practice]
+      tags: [ Practice ]
       responses:
         '200':
           description: ドラフトが存在する
@@ -2468,7 +2464,7 @@ paths:
               example: { message: '指定された科目のドラフトが見つかりません。' }
     delete:
       summary: 演習ドラフトを削除（完了・破棄時）
-      tags: [Practice]
+      tags: [ Practice ]
       responses:
         '204':
           description: 削除成功
@@ -2478,7 +2474,7 @@ paths:
   /practice/sessions:
     post:
       summary: 演習セッションを保存する
-      tags: [Practice]
+      tags: [ Practice ]
       description: |
         一問一答演習の結果を保存する。
         バックエンドは受け取った totalElapsedMs を分単位（切り上げ）に変換し、
@@ -2502,12 +2498,12 @@ paths:
   /auth/logout:
     post:
       summary: ログアウト
-      tags: [Auth]
+      tags: [ Auth ]
       description: |
         現在使用中のアクセストークンを削除し、セッションを終了します。
         内部的には Laravel Sanctum の `currentAccessToken()->delete()` を実行します。
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: ログアウト成功
