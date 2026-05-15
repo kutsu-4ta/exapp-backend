@@ -7,6 +7,7 @@ use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\SubjectAlertSettingController;
+use App\Http\Controllers\ProblemQuizController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DailyLogController;
@@ -97,6 +98,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('problems/{id}', [ProblemController::class, 'update']);
     Route::delete('problems/{id}', [ProblemController::class, 'destroy']);
     Route::post('problems/{id}/touch', [ProblemController::class, 'touch']);
+    Route::get('problems/{id}/quizzes', [ProblemQuizController::class, 'index']);
+    Route::post('problems/{id}/quizzes', [ProblemQuizController::class, 'store']);
+    Route::delete('problems/{id}/quizzes/{quizId}', [ProblemQuizController::class, 'destroy']);
 
     // ダッシュボード
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);

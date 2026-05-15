@@ -337,6 +337,28 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
+    ProblemQuiz:
+      type: object
+      description: Problem に紐づく良問クイズ（FlashBugfix セッション中に「良問」登録されたクイズデータ）
+      required: [ id, problemId, question, options, correctIndex, explanation, createdAt ]
+      properties:
+        id: { type: integer }
+        problemId: { type: integer }
+        question: { type: string }
+        options: { type: array, items: { type: string } }
+        correctIndex: { type: integer, description: '正解の選択肢インデックス（0始まり）' }
+        explanation: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ProblemQuizInput:
+      type: object
+      required: [ question, options, correctIndex, explanation ]
+      properties:
+        question: { type: string }
+        options: { type: array, items: { type: string }, minItems: 2 }
+        correctIndex: { type: integer, description: '正解の選択肢インデックス（0始まり）' }
+        explanation: { type: string }
+
     ProblemInput:
       type: object
       required: [ subject, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt ]
@@ -1651,6 +1673,76 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
       summary: 苦手問題を削除
+      tags: [ Problems ]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /problems/{id}/quizzes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: 親 Problem の ID
+    get:
+      summary: 良問クイズ一覧を取得
+      tags: [ Problems ]
+      description: |
+        指定した Problem に紐づく良問クイズを `createdAt` 降順で返す。
+        ProblemQuickModal でのクイズ一覧表示に使用する。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProblemQuiz' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: 良問クイズを登録
+      tags: [ Problems ]
+      description: |
+        FlashBugfix セッション中に「良問」ボタンを押したときに呼び出す。
+        そのクイズデータを親 Problem の子レコードとして保存する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProblemQuizInput' }
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProblemQuiz' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /problems/{id}/quizzes/{quizId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+      - name: quizId
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      summary: 良問クイズを削除
       tags: [ Problems ]
       responses:
         '204':

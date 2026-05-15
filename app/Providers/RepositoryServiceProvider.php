@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Domain\AlertSetting\AlertSettingRepositoryInterface;
 use App\Domain\SubjectAlertSetting\SubjectAlertSettingRepositoryInterface;
+use App\Domain\ProblemQuiz\ProblemQuizRepositoryInterface;
 use App\Domain\DailyLog\DailyLogRepositoryInterface;
 use App\Domain\ExamSession\ExamSessionRepositoryInterface;
 use App\Domain\Material\MaterialRepositoryInterface;
@@ -20,6 +21,7 @@ use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Domain\Analysis\AnalysisProblemRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
 use App\Infrastructure\Repositories\EloquentSubjectAlertSettingRepository;
+use App\Infrastructure\Repositories\EloquentProblemQuizRepository;
 use App\Infrastructure\Repositories\EloquentAnalysisProblemRepository;
 use App\Infrastructure\Repositories\EloquentPracticeSessionDraftRepository;
 use App\Infrastructure\Repositories\EloquentPracticeSessionRepository;
@@ -40,6 +42,7 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         $this->app->bind(AlertSettingRepositoryInterface::class, EloquentAlertSettingRepository::class);
         $this->app->bind(SubjectAlertSettingRepositoryInterface::class, EloquentSubjectAlertSettingRepository::class);
+        $this->app->bind(ProblemQuizRepositoryInterface::class, EloquentProblemQuizRepository::class);
         $this->app->bind(AnalysisProblemRepositoryInterface::class, EloquentAnalysisProblemRepository::class);
         $this->app->bind(SubjectRepositoryInterface::class, EloquentSubjectRepository::class);
         $this->app->bind(MaterialRepositoryInterface::class, EloquentMaterialRepository::class);
