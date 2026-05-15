@@ -339,7 +339,7 @@ components:
 
     Problem:
       type: object
-      required: [ id, subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, solvedAt, createdAt, updatedAt ]
+      required: [ id, subject, material, questionRef, proficiency, failureTypes, isGoodQuestion, isFormula, solvedAt, createdAt, updatedAt ]
       properties:
         id: { type: integer }
         subject: { $ref: '#/components/schemas/Subject' }
@@ -351,6 +351,7 @@ components:
         proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
+        isFormula: { type: boolean, description: '公式・定義フラグ。true の場合 /flash-card?formulaOnly=true の対象になる' }
         solvedAt: { type: string, format: date }
         lastTouchedAt: { type: string, format: date-time, nullable: true, description: '直近にレビュー（今日の5問で確認）した日時。PUT /problems/:id で自動更新される' }
         createdAt: { type: string, format: date-time }
@@ -396,6 +397,7 @@ components:
         proficiency: { $ref: '#/components/schemas/Proficiency' }
         failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
         isGoodQuestion: { type: boolean }
+        isFormula: { type: boolean, description: '公式・定義フラグ（省略時は false）' }
         solvedAt: { type: string, format: date }
 
     DashboardStats:
@@ -585,8 +587,8 @@ components:
             total_questions: { type: integer }
             strategy:
               type: string
-              enum: [ definition_focused, flash_bugfix ]
-              description: 'definition_focused: Morning Bugfix / flash_bugfix: Flash Bugfix（subjectPage発）'
+              enum: [ definition_focused, flash_bugfix, word_card, formula_check ]
+              description: 'definition_focused: Morning Bugfix / flash_bugfix: Flash Bugfix 一問一答 / word_card: 単語カード / formula_check: 公式チェック'
         questions:
           type: array
           items: { $ref: '#/components/schemas/MorningQuizItem' }
@@ -747,6 +749,7 @@ components:
             proficiency: { $ref: '#/components/schemas/Proficiency' }
             failureTypes: { type: array, items: { $ref: '#/components/schemas/FailureType' } }
             isGoodQuestion: { type: boolean }
+            isFormula: { type: boolean, description: '公式・定義フラグ（省略時は false）' }
 
 
 paths:
@@ -2535,6 +2538,117 @@ paths:
           $ref: '#/components/responses/GeminiQuotaExceeded'
         '503':
           $ref: '#/components/responses/GeminiUnavailable'
+
+  # ── Flash Card ───────────────────────────────────────────────────────────────
+
+  /flash-card:
+    get:
+      summary: 単語カードセッションを取得（Flash Bugfix 単語カードモード）
+      tags: [ AI ]
+      description: |
+        苦手問題から単語カード形式のセッションを生成して返す。
+        レスポンス構造は `/morning-bugfix` と同じ `MorningBugfixSession` を使用する。
+        フロントエンドでは `quiz.question` を表面、`quiz.explanation` を裏面として表示する。
+
+        ### 公式チェックモード（`formulaOnly=true`）
+        財務会計・経済学・運営管理などで重宝する公式・定義のみに絞った問題を返す。
+        バックエンドは `is_formula=true` フラグを持つ問題のみを対象にフィルタリングする。
+
+        ### フォールバック順（Flash Bugfix と同様）
+        1. `failureType` + `subCategoryIds`（フル条件）
+        2. `failureType` のみ
+        3. `subCategoryIds` のみ
+        4. 全問題（習熟度低い順）
+      parameters:
+        - name: subject
+          in: query
+          required: true
+          schema: { type: string }
+          description: 科目名
+          example: '財務・会計'
+        - name: failureType
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/FailureType' }
+          description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象'
+          example: [ '定義', '解法' ]
+        - name: subCategoryIds
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: integer }
+          description: '小分類IDフィルタ（複数選択可）。未指定なら全小分類対象'
+          example: [ 12, 15 ]
+        - name: touchedOrder
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/TouchedOrder' }
+          description: '最後に触れた日からの近さ。未指定なら RANDOM'
+          example: 'old'
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 5, minimum: 1, maximum: 10 }
+          description: '取得問題数（max: 10）'
+          example: 5
+        - name: proficiency
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Proficiency' }
+          description: '習熟度フィルタ（複数選択可）。未指定なら △/× のみ'
+          example: [ '△', '×' ]
+        - name: formulaOnly
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: |
+            `true` にすると公式・定義フラグ（`is_formula=true`）が付いた問題のみを対象にする。
+            財務会計・経済学・運営管理の公式チェックモードで使用する。
+          example: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+              examples:
+                word_card:
+                  summary: 単語カードモード（formulaOnly=false）
+                  value:
+                    session_id: 'flash_card_20260516'
+                    meta: { total_questions: 5, strategy: 'word_card' }
+                    questions:
+                      - id: 101
+                        subject: '財務・会計'
+                        sub_category: 'CVP分析'
+                        problem_context: { original_ref: 'R04 第8問', user_memo: '' }
+                        quiz:
+                          question: '損益分岐点売上高の計算式を答えよ。'
+                          options: [ ]
+                          correct_index: 0
+                          explanation: '固定費 ÷ 限界利益率。限界利益率 = (売上高 - 変動費) / 売上高'
+                        last_touched_at: '2026-05-10'
+                formula_check:
+                  summary: 公式チェックモード（formulaOnly=true）
+                  value:
+                    session_id: 'flash_card_formula_20260516'
+                    meta: { total_questions: 5, strategy: 'formula_check' }
+                    questions: [ ]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── AI Advice ────────────────────────────────────────────────────────────────
 

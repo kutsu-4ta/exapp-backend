@@ -23,6 +23,7 @@ class CreateProblemRequest extends FormRequest
             'failureTypes' => ['required', 'array'],
             'failureTypes.*' => ['string', Rule::enum(FailureType::class)],
             'isGoodQuestion' => ['required', 'boolean'],
+            'isFormula'      => ['sometimes', 'boolean'],
             'solvedAt' => ['required', 'date_format:Y-m-d'],
         ];
     }

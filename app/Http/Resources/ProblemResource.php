@@ -23,6 +23,7 @@ class ProblemResource extends JsonResource
                 $this->failure_types ?? []
             ),
             'isGoodQuestion' => $this->is_good_question,
+            'isFormula'      => $this->is_formula,
             'solvedAt' => $this->solved_at->toDateString(),
             'createdAt' => $this->created_at->toIso8601String(),
             'updatedAt' => $this->updated_at->toIso8601String(),

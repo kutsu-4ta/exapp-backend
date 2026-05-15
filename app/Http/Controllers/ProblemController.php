@@ -81,6 +81,7 @@ class ProblemController extends Controller
                 'proficiency'      => $validated['proficiency'],
                 'failure_types'    => $validated['failureTypes'],
                 'is_good_question' => $validated['isGoodQuestion'],
+                'is_formula'       => $validated['isFormula'] ?? false,
                 'solved_at'        => $validated['solvedAt'],
             ],
         );
@@ -110,6 +111,7 @@ class ProblemController extends Controller
                 'proficiency'      => $validated['proficiency'],
                 'failure_types'    => $validated['failureTypes'],
                 'is_good_question' => $validated['isGoodQuestion'],
+                'is_formula'       => $validated['isFormula'] ?? false,
                 'solved_at'        => $validated['solvedAt'],
             ],
         );
