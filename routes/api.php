@@ -4,6 +4,7 @@ use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\GeminiContextController;
 use App\Http\Controllers\GeminiSettingController;
+use App\Http\Controllers\DegBugfixController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\SubjectAlertSettingController;
@@ -126,6 +127,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 朝の定義復習
     Route::get('morning-bugfix', [MorningBugfixController::class, 'show']);
+
+    // 良問クイズセッション
+    Route::get('deg-bugfix', [DegBugfixController::class, 'show']);
 
     // ストップウォッチ
     Route::get('stopwatch', [StopwatchController::class, 'show']);

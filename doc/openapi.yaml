@@ -2302,6 +2302,45 @@ paths:
 
   # ── Morning Bugfix ───────────────────────────────────────────────────────────
 
+  /deg-bugfix:
+    get:
+      summary: DegBugfix セッションを取得
+      tags: [ AI ]
+      description: |
+        ユーザーが「良問」登録した `ProblemQuiz` を元にクイズセッションを組み立てて返す。
+        科目を指定した場合はその科目の良問のみを対象にする。省略時は全科目が対象。
+        登録済み良問がない、または指定条件に合致する良問がない場合は 422 を返す。
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string }
+          description: '科目名フィルタ。省略時は全科目対象'
+          example: '企業経営理論'
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 5, minimum: 1, maximum: 20 }
+          description: '取得問題数。良問の総数が limit 未満の場合は全件返す'
+          example: 5
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: 条件に合致する良問クイズが存在しない
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ message ]
+                properties:
+                  message: { type: string, example: '良問クイズが登録されていません' }
+
   /morning-bugfix:
     get:
       summary: 定義復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
