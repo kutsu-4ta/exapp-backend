@@ -40,10 +40,25 @@ class EloquentExamSessionRepository implements ExamSessionRepositoryInterface
     public function create(int $userId, array $data): ExamSession
     {
         $session = ExamSession::create([
-            'user_id' => $userId,
+            'user_id'    => $userId,
             'subject_id' => $data['subject_id'],
-            'exam_year' => $data['exam_year'],
-            'status' => ExamSessionStatus::InProgress,
+            'exam_year'  => $data['exam_year'],
+            'status'     => ExamSessionStatus::InProgress,
+        ]);
+
+        return $session->load(['subject', 'questions']);
+    }
+
+    public function createCompleted(int $userId, array $data): ExamSession
+    {
+        $session = ExamSession::create([
+            'user_id'      => $userId,
+            'subject_id'   => $data['subject_id'],
+            'exam_year'    => $data['exam_year'],
+            'status'       => ExamSessionStatus::Completed,
+            'total_score'  => $data['total_score'],
+            'pure_score'   => $data['pure_score'],
+            'completed_at' => Carbon::now(),
         ]);
 
         return $session->load(['subject', 'questions']);

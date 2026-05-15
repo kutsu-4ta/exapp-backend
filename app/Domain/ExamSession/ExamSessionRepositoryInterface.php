@@ -14,6 +14,8 @@ interface ExamSessionRepositoryInterface
 
     public function create(int $userId, array $data): ExamSession;
 
+    public function createCompleted(int $userId, array $data): ExamSession;
+
     public function update(ExamSession $session, array $data): ExamSession;
 
     public function delete(ExamSession $session): void;

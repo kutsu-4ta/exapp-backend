@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ExamSession\CompleteExamSessionRequest;
 use App\Http\Requests\ExamSession\CreateExamSessionRequest;
+use App\Http\Requests\ExamSession\CreateQuickScoreRequest;
 use App\Http\Requests\ExamSession\ListExamSessionsRequest;
 use App\Http\Requests\ExamSession\UpdateExamQuestionRequest;
 use App\Http\Requests\ExamSession\UpdateExamSessionRequest;
@@ -12,6 +13,7 @@ use App\Http\Resources\ExamSessionResource;
 use App\Http\Resources\ExamSessionSummaryResource;
 use App\UseCases\ExamSession\CompleteExamSessionUseCase;
 use App\UseCases\ExamSession\CreateExamSessionUseCase;
+use App\UseCases\ExamSession\CreateQuickScoreExamSessionUseCase;
 use App\UseCases\ExamSession\DeleteExamSessionUseCase;
 use App\UseCases\ExamSession\GetExamSessionUseCase;
 use App\UseCases\ExamSession\GetExamSubjectStatsUseCase;
@@ -28,6 +30,7 @@ class ExamSessionController extends Controller
     public function __construct(
         private readonly ListExamSessionsUseCase $listUseCase,
         private readonly CreateExamSessionUseCase $createUseCase,
+        private readonly CreateQuickScoreExamSessionUseCase $quickScoreUseCase,
         private readonly GetExamSessionUseCase $getUseCase,
         private readonly UpdateExamSessionUseCase $updateUseCase,
         private readonly DeleteExamSessionUseCase $deleteUseCase,
@@ -69,6 +72,26 @@ class ExamSessionController extends Controller
         );
 
         return response()->json(new ExamSessionResource($session), 201);
+    }
+
+    public function quickScore(CreateQuickScoreRequest $request): JsonResponse
+    {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if (!$user) {
+            throw new AuthenticationException('ユーザー認証に失敗しました。');
+        }
+
+        $validated = $request->validated();
+        $session = ($this->quickScoreUseCase)(
+            $user->id,
+            $validated['subject'],
+            $validated['examYear'],
+            $validated['totalScore'],
+            $validated['pureScore'] ?? null,
+        );
+
+        return response()->json(new ExamSessionSummaryResource($session), 201);
     }
 
     public function show(Request $request, int $id): JsonResponse

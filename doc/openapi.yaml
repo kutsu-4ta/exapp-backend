@@ -1971,6 +1971,41 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
 
+  /exam-sessions/quick-score:
+    post:
+      summary: スコアのみ記録（解答明細なし）
+      tags: [ Exam ]
+      description: |
+        解答明細を持たず、合計得点・純粋得点だけを記録して completed セッションを作成する。
+        過去に受験した試験を後から記録する場合などに使用する。
+        pureScore を省略した場合は totalScore と同値として扱う。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ subject, examYear, totalScore ]
+              properties:
+                subject: { $ref: '#/components/schemas/Subject' }
+                examYear: { type: string, example: 'R07' }
+                totalScore: { type: integer, minimum: 0, maximum: 100 }
+                pureScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: '省略時は totalScore と同値'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSessionSummary' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
   /exam-sessions/{id}/questions/{sortOrder}:
     parameters:
       - name: id

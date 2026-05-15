@@ -15,14 +15,18 @@ class ExamSession extends Model
         'exam_year',
         'status',
         'completed_at',
+        'total_score',
+        'pure_score',
     ];
 
     protected function casts(): array
     {
         return [
-            'subject_id' => 'integer',
-            'status' => ExamSessionStatus::class,
+            'subject_id'  => 'integer',
+            'status'      => ExamSessionStatus::class,
             'completed_at' => 'datetime',
+            'total_score' => 'integer',
+            'pure_score'  => 'integer',
         ];
     }
 
@@ -43,11 +47,18 @@ class ExamSession extends Model
 
     public function totalScore(): int
     {
+        // quick-score セッションは stored value を使用
+        if ($this->total_score !== null) {
+            return $this->total_score;
+        }
         return (int) $this->questions->whereNotNull('is_correct')->where('is_correct', true)->sum('point');
     }
 
     public function pureScore(): int
     {
+        if ($this->pure_score !== null) {
+            return $this->pure_score;
+        }
         return (int) $this->questions
             ->where('is_correct', true)
             ->where('is_doubtful', false)

@@ -142,6 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);
     Route::post('exam-sessions', [ExamSessionController::class, 'store']);
+    Route::post('exam-sessions/quick-score', [ExamSessionController::class, 'quickScore']);
     Route::get('exam-sessions/{id}', [ExamSessionController::class, 'show']);
     Route::put('exam-sessions/{id}', [ExamSessionController::class, 'update']);
     Route::delete('exam-sessions/{id}', [ExamSessionController::class, 'destroy']);
