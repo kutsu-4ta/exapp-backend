@@ -124,6 +124,25 @@ components:
       type: string
       description: ユーザーが定義した教材名
 
+    AlertStatusItem:
+      type: object
+      required: [ subject, lastDate, recentMinutes, settings ]
+      properties:
+        subject:
+          type: string
+          description: '科目名'
+        lastDate:
+          type: string
+          format: date
+          nullable: true
+          description: '最終学習日。未学習の場合は null'
+        recentMinutes:
+          type: integer
+          description: '直近 settings.minutesThresholdDays 日間の学習時間（分）'
+        settings:
+          $ref: '#/components/schemas/SubjectAlertSettings'
+          description: 'この科目のアラート設定。未設定の場合はデフォルト値'
+
     SubjectAlertSettings:
       type: object
       required: [ touchAlertEnabled, thresholdDays, includeUntouched, minutesAlertEnabled, minutesThresholdDays, minutesThreshold ]
@@ -409,15 +428,13 @@ components:
               minutes: { type: integer }
         lastTouchedBySubject:
           type: array
+          description: '全科目の最終学習日一覧。アラート判定には GET /api/subjects/alert-status を使用すること'
           items:
             type: object
-            required: [ subject, lastDate, recentMinutes ]
+            required: [ subject, lastDate ]
             properties:
               subject: { type: string }
               lastDate: { type: string, format: date, nullable: true }
-              recentMinutes:
-                type: integer
-                description: '直近 AlertSettings.minutesThresholdDays 日間の学習時間（分）'
         dailyMinutes:
           type: array
           items:
@@ -861,6 +878,27 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+
+  /subjects/alert-status:
+    get:
+      summary: 全科目のアラート判定データを取得
+      tags: [ Subjects ]
+      description: |
+        認証ユーザーの全科目について、アラート判定に必要なデータを一括返却する。
+        各科目の `recentMinutes` は、その科目の `SubjectAlertSettings.minutesThresholdDays` を
+        ウィンドウとして計算した学習時間（分）。
+        アラート設定が未保存の科目はデフォルト設定（touchAlertEnabled=true, minutesAlertEnabled=false）を使用する。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertStatusItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /subjects/{name}/alert-settings:
     parameters:

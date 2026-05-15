@@ -11,7 +11,6 @@ class SelectDegBugfixQuizzesUseCase
     {
         return ProblemQuiz::whereHas('problem', function ($q) use ($userId, $subject) {
             $q->where('user_id', $userId)
-                ->where('is_good_question', true)
                 ->when($subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $subject)));
         })
             ->with(['problem.subject', 'problem.subCategory'])

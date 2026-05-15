@@ -6,6 +6,7 @@ use App\Http\Controllers\GeminiContextController;
 use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\DegBugfixController;
 use App\Http\Controllers\MorningBugfixController;
+use App\Http\Controllers\SubjectAlertStatusController;
 use App\Http\Controllers\AlertSettingController;
 use App\Http\Controllers\SubjectAlertSettingController;
 use App\Http\Controllers\ProblemQuizController;
@@ -43,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 科目
     Route::get('subjects', [SubjectController::class, 'index']);
+    Route::get('subjects/alert-status', [SubjectAlertStatusController::class, 'index']);
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
     Route::get('subjects/{subject}/flashcards', [FlashcardController::class, 'index']);
