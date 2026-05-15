@@ -6,6 +6,7 @@ use App\Http\Controllers\GeminiContextController;
 use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\AlertSettingController;
+use App\Http\Controllers\SubjectAlertSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DailyLogController;
@@ -43,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
     Route::get('subjects/{subject}/flashcards', [FlashcardController::class, 'index']);
+    Route::get('subjects/{subject}/alert-settings', [SubjectAlertSettingController::class, 'show']);
+    Route::put('subjects/{subject}/alert-settings', [SubjectAlertSettingController::class, 'upsert']);
     Route::get('subjects/{subject}/settings', [SubjectDetailController::class, 'showSettings']);
     Route::put('subjects/{subject}/settings', [SubjectDetailController::class, 'upsertSettings']);
     Route::get('subjects/{subject}/monthly-goal/{year}/{month}', [SubjectDetailController::class, 'showMonthlyGoal']);
