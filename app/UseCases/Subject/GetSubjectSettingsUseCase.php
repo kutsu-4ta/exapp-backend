@@ -17,6 +17,7 @@ class GetSubjectSettingsUseCase
 
         return [
             'finalTarget' => $setting?->final_target,
+            'themeColor'  => $setting?->theme_color,
         ];
     }
 }

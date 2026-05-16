@@ -173,6 +173,7 @@ components:
       type: object
       properties:
         finalTarget: { type: string, nullable: true, maxLength: 500, description: '最終目標（科目全体）' }
+        themeColor: { type: string, nullable: true, pattern: '^#[0-9a-fA-F]{6}$', description: 'テーマカラー（16進数 #rrggbb）。nullの場合は科目名ハッシュから自動生成' }
 
     SubjectMonthlyGoal:
       type: object

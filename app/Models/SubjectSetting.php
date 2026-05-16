@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubjectSetting extends Model
 {
-    protected $fillable = ['user_id', 'subject_id', 'final_target'];
+    protected $fillable = ['user_id', 'subject_id', 'final_target', 'theme_color'];
 
     public function subject(): BelongsTo
     {

@@ -32,11 +32,17 @@ class SubjectDetailController extends Controller
     public function upsertSettings(Request $request, string $subject): JsonResponse
     {
         $validated = $request->validate([
-            'finalTarget' => ['nullable', 'string', 'max:1000'],
+            'finalTarget' => ['nullable', 'string', 'max:500'],
+            'themeColor'  => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
         $user = $request->user() ?? auth('sanctum')->user();
-        return response()->json(($this->upsertSettings)($user->id, urldecode($subject), $validated['finalTarget'] ?? null));
+        return response()->json(($this->upsertSettings)(
+            $user->id,
+            urldecode($subject),
+            $validated['finalTarget'] ?? null,
+            $validated['themeColor'] ?? null,
+        ));
     }
 
     public function showMonthlyGoal(Request $request, string $subject, int $year, int $month): JsonResponse
