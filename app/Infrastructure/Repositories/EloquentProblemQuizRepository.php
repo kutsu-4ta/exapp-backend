@@ -15,10 +15,11 @@ class EloquentProblemQuizRepository implements ProblemQuizRepositoryInterface
             ->get();
     }
 
-    public function create(int $problemId, string $question, array $options, int $correctIndex, string $explanation): ProblemQuiz
+    public function create(int $problemId, string $quizType, string $question, array $options, ?int $correctIndex, string $explanation): ProblemQuiz
     {
         return ProblemQuiz::create([
             'problem_id'    => $problemId,
+            'quiz_type'     => $quizType,
             'question'      => $question,
             'options'       => $options,
             'correct_index' => $correctIndex,

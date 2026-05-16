@@ -361,23 +361,35 @@ components:
     ProblemQuiz:
       type: object
       description: Problem に紐づく良問クイズ（FlashBugfix セッション中に「良問」登録されたクイズデータ）
-      required: [ id, problemId, question, options, correctIndex, explanation, createdAt ]
+      required: [ id, problemId, quizType, question, explanation, createdAt ]
       properties:
         id: { type: integer }
         problemId: { type: integer }
+        quizType:
+          type: string
+          enum: [ multiple_choice, word_card ]
+          description: 'multiple_choice: 選択式 / word_card: 単語カード（表裏のみ）'
         question: { type: string }
-        options: { type: array, items: { type: string } }
-        correctIndex: { type: integer, description: '正解の選択肢インデックス（0始まり）' }
+        options: { type: array, items: { type: string }, description: 'multiple_choice のみ。word_card の場合は空配列または省略' }
+        correctIndex: { type: integer, nullable: true, description: '正解の選択肢インデックス（0始まり）。word_card の場合は null' }
         explanation: { type: string }
         createdAt: { type: string, format: date-time }
 
     ProblemQuizInput:
       type: object
-      required: [ question, options, correctIndex, explanation ]
+      required: [ quizType, question, explanation ]
+      description: |
+        `quizType` によって必須フィールドが変わる。
+        - `multiple_choice`: `options`（minItems: 2）と `correctIndex` が必須
+        - `word_card`: `options` と `correctIndex` は不要（省略可）
       properties:
+        quizType:
+          type: string
+          enum: [ multiple_choice, word_card ]
+          description: 'multiple_choice: 選択式 / word_card: 単語カード'
         question: { type: string }
-        options: { type: array, items: { type: string }, minItems: 2 }
-        correctIndex: { type: integer, description: '正解の選択肢インデックス（0始まり）' }
+        options: { type: array, items: { type: string }, description: 'multiple_choice のみ必須（minItems: 2）' }
+        correctIndex: { type: integer, nullable: true, description: '正解の選択肢インデックス（0始まり）。multiple_choice のみ必須' }
         explanation: { type: string }
 
     ProblemInput:
@@ -2418,6 +2430,50 @@ paths:
                 required: [ message ]
                 properties:
                   message: { type: string, example: '良問クイズが登録されていません' }
+
+  /deg-word-card:
+    get:
+      summary: 単語カードセッションを取得（良問登録済み word_card）
+      tags: [ AI ]
+      description: |
+        ユーザーが `quiz_type=word_card` で登録した `ProblemQuiz` を元に単語カードセッションを組み立てて返す。
+        科目を指定した場合はその科目のみ対象。省略時は全科目が対象。
+        登録済み単語カードがない場合は 422 を返す。
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string }
+          description: '科目名フィルタ。省略時は全科目対象'
+          example: '財務・会計'
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 5, minimum: 1, maximum: 20 }
+          description: '取得件数'
+          example: 5
+        - name: formulaOnly
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: 'trueの場合、is_formula=trueの問題に絞り込む'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: 条件に合致する単語カードが存在しない
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ message ]
+                properties:
+                  message: { type: string, example: '登録済み単語カードがありません' }
 
   /morning-bugfix:
     get:

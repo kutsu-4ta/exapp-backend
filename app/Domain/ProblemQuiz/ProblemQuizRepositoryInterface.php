@@ -10,7 +10,7 @@ interface ProblemQuizRepositoryInterface
     /** @return Collection<ProblemQuiz> */
     public function listByProblem(int $problemId): Collection;
 
-    public function create(int $problemId, string $question, array $options, int $correctIndex, string $explanation): ProblemQuiz;
+    public function create(int $problemId, string $quizType, string $question, array $options, ?int $correctIndex, string $explanation): ProblemQuiz;
 
     public function findByIdAndProblem(int $quizId, int $problemId): ?ProblemQuiz;
 

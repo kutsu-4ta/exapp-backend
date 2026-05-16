@@ -5,6 +5,7 @@ use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\GeminiContextController;
 use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\DegBugfixController;
+use App\Http\Controllers\DegWordCardController;
 use App\Http\Controllers\FlashCardSessionController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\SubjectAlertStatusController;
@@ -133,6 +134,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 良問クイズセッション
     Route::get('deg-bugfix', [DegBugfixController::class, 'show']);
+    Route::get('deg-word-card', [DegWordCardController::class, 'show']);
 
     // 単語カード／公式チェックセッション
     Route::get('flash-card', [FlashCardSessionController::class, 'show']);
