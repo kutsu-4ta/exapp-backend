@@ -561,6 +561,7 @@ components:
           properties:
             original_ref: { type: string, nullable: true }
             user_memo: { type: string, nullable: true }
+            material_name: { type: string, nullable: true, description: '教材名' }
         quiz:
           type: object
           nullable: true

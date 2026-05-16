@@ -13,7 +13,7 @@ class SelectDegBugfixQuizzesUseCase
             $q->where('user_id', $userId)
                 ->when($subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $subject)));
         })
-            ->with(['problem.subject', 'problem.subCategory'])
+            ->with(['problem.subject', 'problem.subCategory', 'problem.material'])
             ->inRandomOrder()
             ->limit($limit)
             ->get();

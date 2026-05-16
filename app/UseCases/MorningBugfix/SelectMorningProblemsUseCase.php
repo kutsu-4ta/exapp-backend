@@ -71,7 +71,7 @@ class SelectMorningProblemsUseCase
     private function morningBase(int $userId, BugfixFilter $filter): Builder
     {
         $query = Problem::where('user_id', $userId)
-            ->with(['subject', 'subCategory']);
+            ->with(['subject', 'subCategory', 'material']);
 
         if ($filter->failureTypes !== []) {
             $query->whereJsonContains('failure_types', $filter->failureTypes);
@@ -142,7 +142,7 @@ class SelectMorningProblemsUseCase
     private function flexQuery(int $userId, BugfixFilter $filter, bool $useFailureType, bool $useSubCategory): Builder
     {
         $query = Problem::where('user_id', $userId)
-            ->with(['subject', 'subCategory']);
+            ->with(['subject', 'subCategory', 'material']);
 
         // ミス種別の複数選択対応 (JSON配列内のいずれか)
         if ($useFailureType && !empty($filter->failureTypes)) {

@@ -44,8 +44,9 @@ class DegBugfixController extends Controller
                 'subject'         => $problem->subject?->name ?? '',
                 'sub_category'    => $problem->subCategory?->name,
                 'problem_context' => [
-                    'original_ref' => $problem->question_ref,
-                    'user_memo'    => $problem->note,
+                    'original_ref'  => $problem->question_ref,
+                    'user_memo'     => $problem->note,
+                    'material_name' => $problem->material?->name,
                 ],
                 'quiz'            => [
                     'question'      => $quiz->question,

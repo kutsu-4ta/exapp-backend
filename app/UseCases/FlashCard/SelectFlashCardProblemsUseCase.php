@@ -63,7 +63,7 @@ class SelectFlashCardProblemsUseCase
 
         $tier4 = Problem::where('user_id', $userId)
             ->where('subject_id', $subject->id)
-            ->with(['subject', 'subCategory'])
+            ->with(['subject', 'subCategory', 'material'])
             ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true))
             ->whereNotIn('id', $selected->pluck('id'))
             ->orderByRaw('CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [$incorrect, $partial])
@@ -78,7 +78,7 @@ class SelectFlashCardProblemsUseCase
     {
         $query = Problem::where('user_id', $userId)
             ->where('subject_id', $subjectId)
-            ->with(['subject', 'subCategory'])
+            ->with(['subject', 'subCategory', 'material'])
             ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
 
         if ($useFailureType && !empty($filter->failureTypes)) {
