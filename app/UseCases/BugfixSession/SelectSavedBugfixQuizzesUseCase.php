@@ -48,11 +48,18 @@ class SelectSavedBugfixQuizzesUseCase
             })
             ->with(['problem.subject', 'problem.subCategory', 'problem.material']);
 
-        match ($touchedOrder) {
-            'recent' => $query->orderByRaw('(SELECT last_touched_at FROM problems WHERE problems.id = problem_quizzes.problem_id) DESC NULLS LAST'),
-            'old'    => $query->orderByRaw('(SELECT last_touched_at FROM problems WHERE problems.id = problem_quizzes.problem_id) ASC NULLS FIRST'),
-            default  => $query->inRandomOrder(),
-        };
+        if ($touchedOrder === 'recent' || $touchedOrder === 'old') {
+            $query->join('problems as p_sort', 'p_sort.id', '=', 'problem_quizzes.problem_id')
+                ->select('problem_quizzes.*');
+
+            if ($touchedOrder === 'recent') {
+                $query->orderByRaw('p_sort.last_touched_at DESC NULLS LAST');
+            } else {
+                $query->orderByRaw('p_sort.last_touched_at ASC NULLS FIRST');
+            }
+        } else {
+            $query->inRandomOrder();
+        }
 
         return $query->limit($limit)->get();
     }

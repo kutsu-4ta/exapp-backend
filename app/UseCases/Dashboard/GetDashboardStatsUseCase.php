@@ -2,7 +2,6 @@
 
 namespace App\UseCases\Dashboard;
 
-use App\Models\DailyLog;
 use App\Models\StudySession;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +17,17 @@ class GetDashboardStatsUseCase
         $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
         $thirtyDaysAgo = $now->copy()->subDays(29)->toDateString();
 
+        $thisMonthMinutes = $this->thisMonthMinutes($userId, $year, $month);
+
         return [
             'currentStreak' => $this->currentStreak($userId, $now),
             'allTotalMinutes' => $this->allTotalMinutes($userId),
             'allTotalDays' => $this->allTotalDays($userId),
-            'thisMonthMinutes' => $this->thisMonthMinutes($userId, $year, $month),
+            'thisMonthMinutes' => $thisMonthMinutes,
             'thisMonthDays' => $this->thisMonthDays($userId, $year, $month),
             'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId), // 月曜始まりの一週間
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
-            'weeklyAvgMinutes' => $this->weeklyAvgMinutes($this->thisMonthMinutes($userId, $year, $month), $now),
+            'weeklyAvgMinutes' => $this->weeklyAvgMinutes($thisMonthMinutes, $now),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
             'allSubjectMinutes' => $this->allSubjectMinutes($userId),
             'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
@@ -43,9 +44,11 @@ class GetDashboardStatsUseCase
 
     private function allTotalDays(int $userId): int
     {
-        return (int) DailyLog::where('user_id', $userId)
-            ->whereHas('studySessions')
-            ->count();
+        return (int) DB::table('daily_logs')
+            ->join('study_sessions', 'study_sessions.daily_log_id', '=', 'daily_logs.id')
+            ->where('daily_logs.user_id', $userId)
+            ->distinct()
+            ->count('daily_logs.id');
     }
 
     private function thisMonthMinutes(int $userId, int $year, int $month): int
@@ -59,40 +62,42 @@ class GetDashboardStatsUseCase
 
     private function thisMonthDays(int $userId, int $year, int $month): int
     {
-        return (int) DailyLog::where('user_id', $userId)
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->whereHas('studySessions')
-            ->count();
+        return (int) DB::table('daily_logs')
+            ->join('study_sessions', 'study_sessions.daily_log_id', '=', 'daily_logs.id')
+            ->where('daily_logs.user_id', $userId)
+            ->whereYear('daily_logs.date', $year)
+            ->whereMonth('daily_logs.date', $month)
+            ->distinct()
+            ->count('daily_logs.id');
     }
 
     // 連続学習日数
     private function currentStreak(int $userId, Carbon $now): int
     {
+        // 365日分の学習済み日付を1クエリでまとめて取得し、PHPでカウント
+        $fromDate = $now->copy()->subDays(364)->toDateString();
+        $today    = $now->toDateString();
+
+        $studiedDates = DB::table('daily_logs')
+            ->where('user_id', $userId)
+            ->whereBetween('date', [$fromDate, $today])
+            ->whereExists(fn ($q) => $q->select(DB::raw(1))
+                ->from('study_sessions')
+                ->whereColumn('study_sessions.daily_log_id', 'daily_logs.id'))
+            ->pluck('date')
+            ->map(fn ($d) => (string) $d)
+            ->flip()
+            ->toArray();
+
         $streak  = 0;
         $current = $now->copy()->startOfDay();
 
-        while (true) {
-            $dateStr = $current->toDateString();
-            $hasSession = DB::table('daily_logs')
-                ->where('user_id', $userId)
-                ->where('date', $dateStr)
-                ->whereExists(fn ($q) => $q->select(DB::raw(1))
-                    ->from('study_sessions')
-                    ->whereColumn('study_sessions.daily_log_id', 'daily_logs.id'))
-                ->exists();
-
-            if (!$hasSession) {
+        while ($streak < 365) {
+            if (!isset($studiedDates[$current->toDateString()])) {
                 break;
             }
-
             $streak++;
             $current->subDay();
-
-            // 無限ループ防止（最大365日）
-            if ($streak >= 365) {
-                break;
-            }
         }
 
         return $streak;
