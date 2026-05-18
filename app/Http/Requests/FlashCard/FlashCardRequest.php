@@ -4,6 +4,7 @@ namespace App\Http\Requests\FlashCard;
 
 use App\Enums\FailureType;
 use App\Enums\Proficiency;
+use App\Enums\Rank;
 use App\UseCases\FlashCard\FlashCardFilter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,9 @@ class FlashCardRequest extends FormRequest
             'proficiency.*'    => ['string', Rule::in($proficiencies)],
 
             'formulaOnly'      => ['sometimes', 'boolean'],
+
+            'ranks'            => ['sometimes', 'array'],
+            'ranks.*'          => ['string', Rule::enum(Rank::class)],
         ];
     }
 }

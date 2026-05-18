@@ -37,6 +37,7 @@ class FlashCardSessionController extends Controller
             limit:          $request->integer('limit', FlashCardFilter::DEFAULT_LIMIT),
             proficiencies:  $request->input('proficiency', FlashCardFilter::defaultProficiencies()),
             formulaOnly:    $formulaOnly,
+            ranks:          (array) $request->input('ranks', []),
         );
 
         $problems = ($this->selectProblems)($user->id, $filter);
@@ -68,16 +69,17 @@ class FlashCardSessionController extends Controller
             $quiz = $quizByProblemId[$problem->id] ?? null;
 
             return [
-                'id'              => $problem->id,
-                'subject'         => $problem->subject?->name ?? '',
-                'sub_category'    => $problem->subCategory?->name,
-                'problem_context' => [
+                'id'                => $problem->id,
+                'subject'           => $problem->subject?->name ?? '',
+                'sub_category'      => $problem->subCategory?->name,
+                'sub_category_rank' => $problem->subCategory?->rank?->value,
+                'problem_context'   => [
                     'original_ref'  => $problem->question_ref,
                     'user_memo'     => $problem->note,
                     'material_name' => $problem->material?->name,
                 ],
-                'quiz'            => $quiz,
-                'last_touched_at' => $problem->last_touched_at?->toDateString(),
+                'quiz'              => $quiz,
+                'last_touched_at'   => $problem->last_touched_at?->toDateString(),
             ];
         })->values()->toArray();
 

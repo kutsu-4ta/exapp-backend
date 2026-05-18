@@ -24,8 +24,9 @@ class DegBugfixController extends Controller
 
         $subject = $request->input('subject');
         $limit   = $request->integer('limit', 5);
+        $ranks   = (array) $request->input('ranks', []);
 
-        $quizzes = ($this->selectQuizzes)($user->id, $subject, $limit);
+        $quizzes = ($this->selectQuizzes)($user->id, $subject, $limit, $ranks);
 
         if ($quizzes->isEmpty()) {
             return response()->json(
@@ -40,21 +41,22 @@ class DegBugfixController extends Controller
             $problem = $quiz->problem;
 
             return [
-                'id'              => $problem->id,
-                'subject'         => $problem->subject?->name ?? '',
-                'sub_category'    => $problem->subCategory?->name,
-                'problem_context' => [
+                'id'                => $problem->id,
+                'subject'           => $problem->subject?->name ?? '',
+                'sub_category'      => $problem->subCategory?->name,
+                'sub_category_rank' => $problem->subCategory?->rank?->value,
+                'problem_context'   => [
                     'original_ref'  => $problem->question_ref,
                     'user_memo'     => $problem->note,
                     'material_name' => $problem->material?->name,
                 ],
-                'quiz'            => [
+                'quiz'              => [
                     'question'      => $quiz->question,
                     'options'       => $quiz->options,
                     'correct_index' => $quiz->correct_index,
                     'explanation'   => $quiz->explanation,
                 ],
-                'last_touched_at' => $problem->last_touched_at?->toDateString(),
+                'last_touched_at'   => $problem->last_touched_at?->toDateString(),
             ];
         })->values()->toArray();
 

@@ -97,6 +97,10 @@ class SelectFlashCardProblemsUseCase
             $query->whereIn('proficiency', $filter->proficiencies);
         }
 
+        if (!empty($filter->ranks)) {
+            $query->whereHas('subCategory', fn ($q) => $q->whereIn('rank', $filter->ranks));
+        }
+
         $this->applyTouchedOrder($query, $filter->touchedOrder);
 
         return $query;

@@ -21,6 +21,7 @@ class BugfixFilter
         public readonly ?Carbon $date,          // morningMode 専用テスト用基準日
         public readonly ?string $subject = null, // 科目名フィルタ。null = 全科目
         public readonly bool    $formulaOnly = false, // is_formula = true で絞り込み
+        public readonly array   $ranks = [],    // Rank values の配列。空 = フィルターなし
     ) {}
 
     /** Morning Bugfix デフォルト設定（パラメータ未指定時） */

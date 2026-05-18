@@ -46,6 +46,7 @@ class MorningBugfixController extends Controller
                 proficiencies: $request->input('proficiency', BugfixFilter::defaultProficiencies()),
                 morningMode:   false,
                 date:          null,
+                ranks:         (array) $request->input('ranks', []),
             );
             $sessionId = 'flash_bugfix_' . Carbon::today()->format('Ymd');
             $strategy  = 'flash_bugfix';
@@ -78,16 +79,17 @@ class MorningBugfixController extends Controller
             $quiz = $quizByProblemId[$problem->id] ?? null;
 
             return [
-                'id'              => $problem->id,
-                'subject'         => $problem->subject?->name ?? '',
-                'sub_category'    => $problem->subCategory?->name,
-                'problem_context' => [
+                'id'                 => $problem->id,
+                'subject'            => $problem->subject?->name ?? '',
+                'sub_category'       => $problem->subCategory?->name,
+                'sub_category_rank'  => $problem->subCategory?->rank?->value,
+                'problem_context'    => [
                     'original_ref'  => $problem->question_ref,
                     'user_memo'     => $problem->note,
                     'material_name' => $problem->material?->name,
                 ],
-                'quiz'            => $quiz,
-                'last_touched_at' => $problem->last_touched_at?->toDateString(),
+                'quiz'               => $quiz,
+                'last_touched_at'    => $problem->last_touched_at?->toDateString(),
             ];
         })->values()->toArray();
 

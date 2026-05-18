@@ -65,7 +65,8 @@ class SubCategoryController extends Controller
         $validated = $request->validated();
         $subCategory = ($this->updateUseCase)($user->id, $id, [
             'subject' => $validated['subject'],
-            'name' => $validated['name'],
+            'name'    => $validated['name'],
+            'rank'    => $validated['rank'] ?? null,
         ]);
 
         return response()->json(new SubCategoryResource($subCategory));

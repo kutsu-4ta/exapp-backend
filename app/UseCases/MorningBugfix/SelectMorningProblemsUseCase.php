@@ -70,13 +70,17 @@ class SelectMorningProblemsUseCase
 
     private function morningBase(int $userId, BugfixFilter $filter): Builder
     {
-        $query = Problem::where('user_id', $userId)
+        $query = Problem::where('problems.user_id', $userId)
             ->with(['subject', 'subCategory', 'material'])
             ->when($filter->subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $filter->subject)))
             ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
 
         if ($filter->failureTypes !== []) {
             $query->whereJsonContains('failure_types', $filter->failureTypes);
+        }
+
+        if (!empty($filter->ranks)) {
+            $query->whereHas('subCategory', fn ($q) => $q->whereIn('rank', $filter->ranks));
         }
 
         return $query;
@@ -166,6 +170,10 @@ class SelectMorningProblemsUseCase
 
         if (!empty($filter->proficiencies)) {
             $query->whereIn('proficiency', $filter->proficiencies);
+        }
+
+        if (!empty($filter->ranks)) {
+            $query->whereHas('subCategory', fn ($q) => $q->whereIn('rank', $filter->ranks));
         }
 
         $this->applyTouchedOrder($query, $filter->touchedOrder);

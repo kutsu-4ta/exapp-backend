@@ -4,6 +4,7 @@ namespace App\Http\Requests\MorningBugfix;
 
 use App\Enums\FailureType;
 use App\Enums\Proficiency;
+use App\Enums\Rank;
 use App\UseCases\MorningBugfix\BugfixFilter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,9 @@ class MorningBugfixRequest extends FormRequest
             'limit'           => ['sometimes', 'integer', 'min:1', 'max:' . BugfixFilter::MAX_LIMIT],
             'proficiency'     => ['sometimes', 'array'],
             'proficiency.*'   => ['string', Rule::in($proficiencies)],
+
+            'ranks'           => ['sometimes', 'array'],
+            'ranks.*'         => ['string', Rule::enum(Rank::class)],
         ];
     }
 }

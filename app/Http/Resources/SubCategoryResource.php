@@ -10,9 +10,10 @@ class SubCategoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'subject' => $this->subject->name,
-            'name' => $this->name,
+            'id'        => $this->id,
+            'subject'   => $this->subject->name,
+            'name'      => $this->name,
+            'rank'      => $this->rank?->value,
             'createdAt' => $this->created_at->toIso8601String(),
             'updatedAt' => $this->updated_at->toIso8601String(),
         ];

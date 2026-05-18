@@ -17,6 +17,7 @@ class FlashCardFilter
         public readonly int     $limit,
         public readonly array   $proficiencies,
         public readonly bool    $formulaOnly,
+        public readonly array   $ranks = [],    // Rank values の配列。空 = フィルターなし
     ) {}
 
     public static function defaultProficiencies(): array
