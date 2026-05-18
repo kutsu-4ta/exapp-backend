@@ -2392,6 +2392,88 @@ paths:
 
   # ── Morning Bugfix ───────────────────────────────────────────────────────────
 
+  /bugfix-session:
+    get:
+      summary: 統合クイズセッションを取得
+      tags: [ AI ]
+      description: |
+        `source` × `quizMode` の組み合わせで4つのロジックを統合したエンドポイント。
+
+        | source  | quizMode          | 内部ロジック                     |
+        |---------|-------------------|----------------------------------|
+        | ai      | multiple_choice   | Flash Bugfix（Gemini生成4択）    |
+        | ai      | word_card         | Flash Card（Gemini生成単語カード）|
+        | saved   | multiple_choice   | 保存済み4択クイズ（deg-bugfix相当）|
+        | saved   | word_card         | 保存済み単語カード（deg-word-card相当）|
+
+        - `source=ai, quizMode=word_card` は `subjects[0]` を科目として使用する（subjects 必須）
+        - `source=saved` は `subjects[]` が複数でも対応（混合して返す）
+        - 既存エンドポイント（`/deg-bugfix`, `/deg-word-card`, `/flash-card`, `/morning-bugfix`）は移行期間中維持
+      parameters:
+        - name: source
+          in: query
+          required: false
+          schema: { type: string, enum: [ai, saved], default: ai }
+          description: 'AI生成 or 保存済みクイズ'
+        - name: subjects[]
+          in: query
+          required: false
+          schema: { type: array, items: { type: string } }
+          description: '科目フィルタ。省略時は全科目。source=ai+word_card の場合は subjects[0] を使用'
+          example: ['財務・会計', '企業経営理論']
+        - name: quizMode
+          in: query
+          required: false
+          schema: { type: string, enum: [multiple_choice, word_card], default: multiple_choice }
+          description: 'クイズ形式'
+        - name: formulaOnly
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: 'trueの場合、is_formula=trueの問題に絞り込む'
+        - name: failureTypes[]
+          in: query
+          required: false
+          schema: { type: array, items: { type: string } }
+          description: 'ミス種別フィルタ'
+        - name: subCategoryIds[]
+          in: query
+          required: false
+          schema: { type: array, items: { type: integer } }
+          description: '論点IDフィルタ'
+        - name: proficiency[]
+          in: query
+          required: false
+          schema: { type: array, items: { type: string } }
+          description: '習熟度フィルタ'
+        - name: touchedOrder
+          in: query
+          required: false
+          schema: { type: string, enum: [recent, old], nullable: true }
+          description: '問題順。省略時はランダム'
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 5, minimum: 1, maximum: 20 }
+          description: '取得問題数'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: source=ai+word_card で subjects 未指定
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ message ]
+                properties:
+                  message: { type: string, example: 'quizMode=word_card の場合は subjects の指定が必要です' }
+
   /deg-bugfix:
     get:
       summary: DegBugfix セッションを取得

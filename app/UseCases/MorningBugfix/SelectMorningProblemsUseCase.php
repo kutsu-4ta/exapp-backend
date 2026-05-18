@@ -71,7 +71,9 @@ class SelectMorningProblemsUseCase
     private function morningBase(int $userId, BugfixFilter $filter): Builder
     {
         $query = Problem::where('user_id', $userId)
-            ->with(['subject', 'subCategory', 'material']);
+            ->with(['subject', 'subCategory', 'material'])
+            ->when($filter->subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $filter->subject)))
+            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
 
         if ($filter->failureTypes !== []) {
             $query->whereJsonContains('failure_types', $filter->failureTypes);
@@ -129,7 +131,9 @@ class SelectMorningProblemsUseCase
         $partial   = Proficiency::Partial->value;
 
         $tier4 = Problem::where('user_id', $userId)
-            ->with(['subject', 'subCategory'])
+            ->with(['subject', 'subCategory', 'material'])
+            ->when($filter->subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $filter->subject)))
+            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true))
             ->whereNotIn('id', $selected->pluck('id'))
             ->orderByRaw('CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [$incorrect, $partial])
             ->orderByRaw('RANDOM()')
@@ -142,7 +146,9 @@ class SelectMorningProblemsUseCase
     private function flexQuery(int $userId, BugfixFilter $filter, bool $useFailureType, bool $useSubCategory): Builder
     {
         $query = Problem::where('user_id', $userId)
-            ->with(['subject', 'subCategory', 'material']);
+            ->with(['subject', 'subCategory', 'material'])
+            ->when($filter->subject, fn ($q) => $q->whereHas('subject', fn ($q) => $q->where('name', $filter->subject)))
+            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
 
         // ミス種別の複数選択対応 (JSON配列内のいずれか)
         if ($useFailureType && !empty($filter->failureTypes)) {
