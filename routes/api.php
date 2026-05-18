@@ -27,6 +27,9 @@ use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\FlashcardController;
 use App\Http\Controllers\StopwatchController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\SprintController;
+use App\Http\Controllers\StudyTicketController;
+use App\Http\Controllers\TicketNoteController;
 use App\Http\Controllers\SubjectDetailController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -148,6 +151,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('stopwatch/start', [StopwatchController::class, 'start']);
     Route::post('stopwatch/stop', [StopwatchController::class, 'stop']);
     Route::post('stopwatch/reset', [StopwatchController::class, 'reset']);
+
+    // スプリント
+    Route::get('sprints', [SprintController::class, 'index']);
+    Route::post('sprints', [SprintController::class, 'store']);
+    Route::get('sprints/{id}', [SprintController::class, 'show']);
+    Route::put('sprints/{id}', [SprintController::class, 'update']);
+    Route::delete('sprints/{id}', [SprintController::class, 'destroy']);
+    Route::post('sprints/{id}/complete', [SprintController::class, 'complete']);
+    Route::get('sprints/{id}/stats', [SprintController::class, 'stats']);
+
+    // 学習チケット
+    Route::get('tickets', [StudyTicketController::class, 'index']);
+    Route::post('tickets', [StudyTicketController::class, 'store']);
+    Route::get('tickets/{id}', [StudyTicketController::class, 'show']);
+    Route::put('tickets/{id}', [StudyTicketController::class, 'update']);
+    Route::delete('tickets/{id}', [StudyTicketController::class, 'destroy']);
+    Route::post('tickets/{id}/complete', [StudyTicketController::class, 'complete']);
+    Route::post('tickets/{id}/reopen', [StudyTicketController::class, 'reopen']);
+    Route::patch('tickets/{id}/sprint', [StudyTicketController::class, 'move']);
+    Route::get('tickets/{id}/notes', [TicketNoteController::class, 'index']);
+    Route::post('tickets/{id}/notes', [TicketNoteController::class, 'store']);
+    Route::put('tickets/{id}/notes/{noteId}', [TicketNoteController::class, 'update']);
+    Route::delete('tickets/{id}/notes/{noteId}', [TicketNoteController::class, 'destroy']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

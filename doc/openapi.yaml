@@ -778,6 +778,202 @@ components:
             isGoodQuestion: { type: boolean }
             isFormula: { type: boolean, description: '公式・定義フラグ（省略時は false）' }
 
+    # ── Sprint ────────────────────────────────────────────────────────────────────
+
+    SprintType:
+      type: string
+      enum: [ backlog, active ]
+      description: |
+        - `backlog`: バックログ（ユーザーごとに1件、削除・完了不可）
+        - `active`: 通常スプリント
+
+    SprintStatus:
+      type: string
+      enum: [ active, completed ]
+
+    Sprint:
+      type: object
+      required: [ id, name, type, status, createdAt ]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        goal: { type: string, nullable: true, maxLength: 500, description: 'スプリントのテーマ・ゴール' }
+        retrospective: { type: string, nullable: true, description: 'スプリント完了時の振り返り（Markdown）' }
+        type: { $ref: '#/components/schemas/SprintType' }
+        status: { $ref: '#/components/schemas/SprintStatus' }
+        startDate: { type: string, format: date, nullable: true }
+        endDate: { type: string, format: date, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    SprintInput:
+      type: object
+      required: [ name, startDate, endDate ]
+      properties:
+        name: { type: string, maxLength: 100, example: '第1回スプリント' }
+        goal: { type: string, maxLength: 500, description: 'スプリントのテーマ・ゴール（任意）' }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    SprintUpdateInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        goal: { type: string, nullable: true, maxLength: 500 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    SprintSubCategoryStats:
+      type: object
+      required: [ subCategoryId, subCategoryName, total, done ]
+      properties:
+        subCategoryId: { type: integer }
+        subCategoryName: { type: string }
+        total: { type: integer, description: 'スプリント内のチケット総数' }
+        done: { type: integer, description: '完了済みチケット数' }
+
+    SprintStats:
+      type: object
+      required: [ sprintId, sprintName, total, done, doing, todo, completionRate, bySubCategory ]
+      properties:
+        sprintId: { type: integer }
+        sprintName: { type: string }
+        total: { type: integer, description: 'チケット総数' }
+        done: { type: integer, description: '完了数' }
+        doing: { type: integer, description: '着手中数' }
+        todo: { type: integer, description: '未着手数' }
+        completionRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: '消化率（%）= done / total × 100'
+        avgCompleteDays:
+          type: number
+          format: float
+          nullable: true
+          description: '作成から完了までの平均日数。完了チケットがない場合は null'
+        bySubCategory:
+          type: array
+          items: { $ref: '#/components/schemas/SprintSubCategoryStats' }
+          description: '小分類別の集計（1チケットが複数小分類を持つ場合は各小分類にカウント）'
+
+    # ── StudyTicket ───────────────────────────────────────────────────────────────
+
+    TicketStatus:
+      type: string
+      enum: [ todo, doing, done ]
+
+    TicketPriority:
+      type: string
+      enum: [ high, medium, low ]
+
+    TicketType:
+      type: string
+      enum: [ knowledge, practice, understanding, memorization ]
+      description: |
+        - `knowledge`: 知識補強型（整理・比較）
+        - `practice`: 演習型（N問連続正解など）
+        - `understanding`: 理解整理型（説明できるレベルまで）
+        - `memorization`: 暗記型（用語・数字）
+
+    TicketSource:
+      type: string
+      enum: [ wrong_answer, mock_exam, review, manual ]
+      description: |
+        - `wrong_answer`: 過去問ミスから発生
+        - `mock_exam`: 模試から発生
+        - `review`: 定期見直しから発生
+        - `manual`: 手動作成
+
+    TicketSubCategoryRef:
+      type: object
+      required: [ id, name ]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        subject: { type: string, nullable: true, description: '親科目名' }
+
+    StudyTicket:
+      type: object
+      required: [ id, sprintId, subject, title, acceptanceCriteria, dueDate, status, priority, ticketType, source, subCategories, createdAt ]
+      properties:
+        id: { type: integer }
+        sprintId: { type: integer }
+        subject: { type: string, description: '紐づく科目名' }
+        title: { type: string }
+        acceptanceCriteria: { type: string, description: '達成条件（曖昧な表現禁止）' }
+        dueDate: { type: string, format: date }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+        ticketType: { $ref: '#/components/schemas/TicketType' }
+        source: { $ref: '#/components/schemas/TicketSource' }
+        estimateMinutes: { type: integer, nullable: true, minimum: 1, maximum: 480 }
+        subCategories:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/TicketSubCategoryRef' }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    StudyTicketInput:
+      type: object
+      required: [ subject, title, acceptanceCriteria, dueDate, priority, ticketType, source, subCategoryIds ]
+      properties:
+        sprintId:
+          type: integer
+          nullable: true
+          description: '省略またはnullの場合はバックログに追加される'
+        subject: { type: string, description: '紐づく科目名（必須）' }
+        title: { type: string, maxLength: 255 }
+        acceptanceCriteria: { type: string, description: '達成条件（具体的に記述）' }
+        dueDate: { type: string, format: date }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+        ticketType: { $ref: '#/components/schemas/TicketType' }
+        source: { $ref: '#/components/schemas/TicketSource' }
+        estimateMinutes: { type: integer, nullable: true, minimum: 1, maximum: 480 }
+        subCategoryIds:
+          type: array
+          minItems: 1
+          items: { type: integer }
+          description: '小分類IDの配列（1つ以上必須、選択した科目に属するものに限る）'
+
+    StudyTicketUpdateInput:
+      type: object
+      properties:
+        subject: { type: string, description: '紐づく科目名' }
+        title: { type: string, maxLength: 255 }
+        acceptanceCriteria: { type: string }
+        dueDate: { type: string, format: date }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+        ticketType: { $ref: '#/components/schemas/TicketType' }
+        source: { $ref: '#/components/schemas/TicketSource' }
+        estimateMinutes: { type: integer, nullable: true, minimum: 1, maximum: 480 }
+        subCategoryIds:
+          type: array
+          minItems: 1
+          items: { type: integer }
+          description: '送信した場合は全量置き換え（sync）'
+
+    # ── TicketNote ───────────────────────────────────────────────────────────────
+
+    TicketNote:
+      type: object
+      required: [ id, ticketId, body, createdAt, updatedAt ]
+      properties:
+        id: { type: integer }
+        ticketId: { type: integer }
+        body: { type: string, description: 'ノート本文（Markdown可）' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TicketNoteInput:
+      type: object
+      required: [ body ]
+      properties:
+        body: { type: string, maxLength: 2000, description: 'ノート本文' }
+
 
 paths:
   # ── Stopwatch ─────────────────────────────────────────────────────────────────
@@ -2864,6 +3060,449 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+
+  # ── Sprint ────────────────────────────────────────────────────────────────────
+
+  /sprints:
+    get:
+      summary: スプリント一覧を取得する
+      tags: [ Sprint ]
+      description: |
+        ユーザーの全スプリントを返す。
+        バックログスプリントが未作成の場合は自動生成される。
+        レスポンスはバックログを先頭に、以降は作成日降順で返す。
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Sprint' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: スプリントを作成する
+      tags: [ Sprint ]
+      description: type は常に `active`。バックログはシステムが自動生成するため手動作成不可。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SprintInput' }
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sprint' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /sprints/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      summary: スプリント詳細を取得する
+      tags: [ Sprint ]
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sprint' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: スプリントを更新する
+      tags: [ Sprint ]
+      description: |
+        バックログスプリントは `name` のみ変更可能。
+        `startDate` / `endDate` はバックログに対して送信しても無視される。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SprintUpdateInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sprint' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    delete:
+      summary: スプリントを削除する
+      tags: [ Sprint ]
+      description: バックログスプリントは削除不可（422 を返す）。
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /sprints/{id}/complete:
+    post:
+      summary: スプリントを完了する
+      tags: [ Sprint ]
+      description: |
+        `status` を `completed` に変更し `completedAt` をセットする。
+        バックログおよびすでに完了済みのスプリントには 422 を返す。
+        振り返り（`retrospective`）は必須。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ retrospective ]
+              properties:
+                retrospective: { type: string, description: '振り返り（Markdown）' }
+      responses:
+        '200':
+          description: 完了成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sprint' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /sprints/{id}/stats:
+    get:
+      summary: スプリントのKPIを取得する
+      tags: [ Sprint ]
+      description: |
+        チケット消化率・平均完了日数・小分類別集計を返す。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SprintStats' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── StudyTicket ───────────────────────────────────────────────────────────────
+
+  /tickets:
+    get:
+      summary: チケット一覧を取得する
+      tags: [ StudyTicket ]
+      description: |
+        クエリパラメータで絞り込み可能。
+        `sprintId` を省略した場合は全スプリントのチケットを返す。
+        ソート順：`dueDate` 昇順 → `priority`（high → medium → low）降順。
+      parameters:
+        - name: sprintId
+          in: query
+          schema: { type: integer }
+          description: 'スプリントIDで絞り込み（省略時は全件）'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TicketStatus' }
+          description: 'ステータスで絞り込み'
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: チケットを作成する
+      tags: [ StudyTicket ]
+      description: |
+        `sprintId` を省略またはnullにした場合、バックログスプリントに自動配置される。
+        `subCategoryIds` は1件以上必須。
+        作成時の `status` は常に `todo`。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudyTicketInput' }
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /tickets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      summary: チケット詳細を取得する
+      tags: [ StudyTicket ]
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: チケットを更新する
+      tags: [ StudyTicket ]
+      description: |
+        `subCategoryIds` を送信した場合は全量置き換え（sync）。
+        `status` を `done` に変更すると `completedAt` が自動セットされる。
+        `status` を `done` 以外に変更すると `completedAt` がクリアされる（再オープン相当）。
+        専用エンドポイント（`/complete` / `/reopen`）の使用を推奨。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudyTicketUpdateInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    delete:
+      summary: チケットを削除する
+      tags: [ StudyTicket ]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{id}/complete:
+    post:
+      summary: チケットを完了する
+      tags: [ StudyTicket ]
+      description: |
+        `status` を `done` に変更し `completedAt` を自動セットする。
+        すでに `done` の場合は 422 を返す。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 完了成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /tickets/{id}/reopen:
+    post:
+      summary: チケットを再オープンする
+      tags: [ StudyTicket ]
+      description: |
+        `status` を `todo` に戻し `completedAt` をクリアする。
+        `done` 以外のチケットに対しては 422 を返す。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 再オープン成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /tickets/{id}/sprint:
+    patch:
+      summary: チケットを別のスプリントに移動する
+      tags: [ StudyTicket ]
+      description: バックログを含む任意のスプリントへ移動できる。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ sprintId ]
+              properties:
+                sprintId: { type: integer, description: '移動先スプリントID' }
+      responses:
+        '200':
+          description: 移動成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ── TicketNote ────────────────────────────────────────────────────────────────
+
+  /tickets/{id}/notes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: チケットID
+
+    get:
+      summary: チケットのノート一覧を取得する
+      tags: [ StudyTicket ]
+      description: 作成日昇順（スレッド順）で返す。
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TicketNote' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: チケットにノートを追加する
+      tags: [ StudyTicket ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TicketNoteInput' }
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketNote' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /tickets/{id}/notes/{noteId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: チケットID
+      - name: noteId
+        in: path
+        required: true
+        schema: { type: integer }
+        description: ノートID
+
+    put:
+      summary: ノートを更新する
+      tags: [ StudyTicket ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TicketNoteInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketNote' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    delete:
+      summary: ノートを削除する
+      tags: [ StudyTicket ]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /auth/logout:
     post:

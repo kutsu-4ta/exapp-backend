@@ -19,6 +19,9 @@ use App\Domain\Practice\PracticeSessionRepositoryInterface;
 use App\Domain\Stopwatch\StopwatchRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Domain\Analysis\AnalysisProblemRepositoryInterface;
+use App\Domain\Sprint\SprintRepositoryInterface;
+use App\Domain\StudyTicket\StudyTicketRepositoryInterface;
+use App\Domain\TicketNote\TicketNoteRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
 use App\Infrastructure\Repositories\EloquentSubjectAlertSettingRepository;
 use App\Infrastructure\Repositories\EloquentProblemQuizRepository;
@@ -34,6 +37,9 @@ use App\Infrastructure\Repositories\EloquentProblemRepository;
 use App\Infrastructure\Repositories\EloquentStudySessionRepository;
 use App\Infrastructure\Repositories\EloquentSubCategoryRepository;
 use App\Infrastructure\Repositories\EloquentSubjectRepository;
+use App\Infrastructure\Repositories\EloquentSprintRepository;
+use App\Infrastructure\Repositories\EloquentStudyTicketRepository;
+use App\Infrastructure\Repositories\EloquentTicketNoteRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -56,5 +62,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(StopwatchRepositoryInterface::class, EloquentStopwatchRepository::class);
         $this->app->bind(PracticeSessionRepositoryInterface::class, EloquentPracticeSessionRepository::class);
         $this->app->bind(PracticeSessionDraftRepositoryInterface::class, EloquentPracticeSessionDraftRepository::class);
+        $this->app->bind(SprintRepositoryInterface::class, EloquentSprintRepository::class);
+        $this->app->bind(StudyTicketRepositoryInterface::class, EloquentStudyTicketRepository::class);
+        $this->app->bind(TicketNoteRepositoryInterface::class, EloquentTicketNoteRepository::class);
     }
 }
