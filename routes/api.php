@@ -27,6 +27,7 @@ use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\FlashcardController;
 use App\Http\Controllers\StopwatchController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\SnippetController;
 use App\Http\Controllers\SprintController;
 use App\Http\Controllers\StudyTicketController;
 use App\Http\Controllers\TicketNoteController;
@@ -174,6 +175,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('tickets/{id}/notes', [TicketNoteController::class, 'store']);
     Route::put('tickets/{id}/notes/{noteId}', [TicketNoteController::class, 'update']);
     Route::delete('tickets/{id}/notes/{noteId}', [TicketNoteController::class, 'destroy']);
+
+    // スニペット
+    Route::get('snippets', [SnippetController::class, 'index']);
+    Route::post('snippets', [SnippetController::class, 'store']);
+    Route::put('snippets/{id}', [SnippetController::class, 'update']);
+    Route::delete('snippets/{id}', [SnippetController::class, 'destroy']);
 
     // 試験セッション
     Route::get('exam-sessions', [ExamSessionController::class, 'index']);

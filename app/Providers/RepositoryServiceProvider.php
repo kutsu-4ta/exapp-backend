@@ -21,6 +21,7 @@ use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Domain\Analysis\AnalysisProblemRepositoryInterface;
 use App\Domain\Sprint\SprintRepositoryInterface;
 use App\Domain\StudyTicket\StudyTicketRepositoryInterface;
+use App\Domain\Snippet\SnippetRepositoryInterface;
 use App\Domain\TicketNote\TicketNoteRepositoryInterface;
 use App\Infrastructure\Repositories\EloquentAlertSettingRepository;
 use App\Infrastructure\Repositories\EloquentSubjectAlertSettingRepository;
@@ -39,6 +40,7 @@ use App\Infrastructure\Repositories\EloquentSubCategoryRepository;
 use App\Infrastructure\Repositories\EloquentSubjectRepository;
 use App\Infrastructure\Repositories\EloquentSprintRepository;
 use App\Infrastructure\Repositories\EloquentStudyTicketRepository;
+use App\Infrastructure\Repositories\EloquentSnippetRepository;
 use App\Infrastructure\Repositories\EloquentTicketNoteRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -65,5 +67,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(SprintRepositoryInterface::class, EloquentSprintRepository::class);
         $this->app->bind(StudyTicketRepositoryInterface::class, EloquentStudyTicketRepository::class);
         $this->app->bind(TicketNoteRepositoryInterface::class, EloquentTicketNoteRepository::class);
+        $this->app->bind(SnippetRepositoryInterface::class, EloquentSnippetRepository::class);
     }
 }

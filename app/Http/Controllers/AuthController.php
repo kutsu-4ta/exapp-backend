@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Material\MaterialRepositoryInterface;
+use App\Domain\Snippet\SnippetRepositoryInterface;
 use App\Domain\Subject\SubjectRepositoryInterface;
 use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
@@ -17,6 +18,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly SubjectRepositoryInterface $subjectRepository,
         private readonly MaterialRepositoryInterface $materialRepository,
+        private readonly SnippetRepositoryInterface $snippetRepository,
         private readonly FirebaseAuth $firebaseAuth,
     ) {}
 
@@ -107,6 +109,7 @@ class AuthController extends Controller
             \DB::transaction(function () use ($user) {
                 $this->subjectRepository->seedDefaults($user->id);
                 $this->materialRepository->seedDefaults($user->id);
+                $this->snippetRepository->seedDefaults($user->id);
             });
         }
 

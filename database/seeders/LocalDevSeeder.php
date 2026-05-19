@@ -25,6 +25,7 @@ use App\Models\SubCategory;
 use App\Models\Subject;
 use App\Models\SubjectMonthlyGoal;
 use App\Models\SubjectSetting;
+use App\Models\Snippet;
 use App\Models\TicketNote;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -59,6 +60,7 @@ class LocalDevSeeder extends Seeder
             $this->seedProblems();
             $this->seedExamSessions();
             $this->seedSprints();
+            $this->seedSnippets();
         });
 
         $this->command->info('LocalDevSeeder 完了');
@@ -1150,6 +1152,18 @@ class LocalDevSeeder extends Seeder
                 'body' => "死荷重の計算手順：\n\n1. 課税前の均衡点（P0, Q0）を求める\n2. 課税後の均衡点（P1, Q1）を求める\n3. 死荷重 = (P1 - P0) × (Q0 - Q1) ÷ 2\n\nグラフを必ず書いてから計算する。供給曲線が上にシフトするイメージ。",
             ]);
         }
+    }
+
+    // ----------------------------------------------------------------
+    // Snippets
+    // ----------------------------------------------------------------
+
+    private function seedSnippets(): void
+    {
+        Snippet::firstOrCreate(
+            ['user_id' => $this->userId, 'title' => '解説要求'],
+            ['content' => "ノートにまとめたいので、特定の選択肢に依存しないように解説してください。\n通常の解説の後に、末尾に以下のメタ文字列をつけてください。\n#Definition 定義, #Formula 公式, #Keyword 重要語, #Pitfall 間違えやすい点, #Example 具体例, #Relation 他概念との関係, #MemoryHook 覚え方"],
+        );
     }
 
     private function createTicket(int $sprintId, ?int $subjectId, array $attrs, array $subCategoryIds = []): StudyTicket
