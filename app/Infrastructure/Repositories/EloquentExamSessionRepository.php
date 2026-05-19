@@ -89,10 +89,13 @@ class EloquentExamSessionRepository implements ExamSessionRepositoryInterface
 
             ExamQuestion::insert($rows);
 
-            $session->update([
-                'status'       => ExamSessionStatus::Completed,
-                'completed_at' => Carbon::now(),
-            ]);
+            $updateData = ['status' => ExamSessionStatus::Completed];
+
+            if ($session->completed_at === null) {
+                $updateData['completed_at'] = Carbon::now();
+            }
+
+            $session->update($updateData);
         });
 
         return $session->fresh(['subject', 'questions']);
