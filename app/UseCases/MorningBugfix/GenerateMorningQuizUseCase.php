@@ -205,19 +205,34 @@ class GenerateMorningQuizUseCase
     private function staticErrors(array $item, int $count): array
     {
         $errors = [];
+
         $options = $item['options'] ?? [];
         $correctIndex = (int)($item['correct_index'] ?? -1);
 
         if (count($options) !== $count) {
-            $errors[] = 'options count must be ' . $count . ', got ' . count($options);
+            $errors[] = 'options count mismatch';
         }
 
         if ($correctIndex < 0 || $correctIndex >= count($options)) {
-            $errors[] = 'correct_index ' . $correctIndex . ' is out of range [0, ' . count($options) . ')';
+            $errors[] = 'correct_index out of range';
         }
 
         if (count(array_unique($options)) !== count($options)) {
-            $errors[] = 'duplicate options detected';
+            $errors[] = 'duplicate options';
+        }
+
+        $lengths = array_map(
+            fn($o) => mb_strlen($o),
+            $options
+        );
+
+        if (!empty($lengths)) {
+            $max = max($lengths);
+            $min = min($lengths);
+
+            if ($max - $min > 25) {
+                $errors[] = 'option length imbalance';
+            }
         }
 
         return $errors;
@@ -227,31 +242,44 @@ class GenerateMorningQuizUseCase
 
     private function buildSystemInstruction(string $exam, string $theme, int $count): string
     {
-        $zeroStartIndex = $count - 1;
+        $maxIndex = $count - 1;
+
         return <<<TEXT
 あなたは{$exam}の問題生成AIです。
 「{$theme}」を問う{$count}択選択問題を日本語で生成してください。
 
-【必須】
-- 定義理解を問う問題にする
-- 正答は一意
-- 選択肢は同程度の自然さ・長さにする
-- 誤答は類似概念を用いる
-- explanationに以下を含める
-  - 正答が正しい理由
-  - 他選択肢が誤りの理由
-  - 提供された定義・キーワード・公式
-- correct_indexは0始まりの整数（0〜{$zeroStartIndex}）
-- explanation に選択肢番号（1,2,3...）を書かない
-- 選択肢名そのもの（例: EOQ）で説明する
+【最重要ルール】
+この問題は「用語の定義」を問うこと。
+知識の中心概念（Definition）そのものを聞くこと。
+
+問題文は必ず次の形式に近づけること：
+「◯◯に関する記述として最も適切なものはどれか」
+または
+「◯◯の定義として最も適切なものはどれか」
+
+【選択肢ルール】
+- 正答は Definition の本文を言い換えたもの
+- 誤答も Definition に近い別概念にする
+- 属性・効果・例・制度要件を正答にしてはいけない
+- 全選択肢は同じ粒度にする
+- 選択肢の長さを揃える
+- 選択肢同士で意味が重複しない
+
+【explanationルール】
+必ず以下を含める：
+- 正答が正しい理由
+- 各誤答がなぜ誤りか
+- knowledge 内の定義・キーワードのみを使う
+
+【correct_index】
+0始まり（0〜{$maxIndex}）
 
 【禁止】
+- Definition以外を正答にする
 - 複数正答
-- 選択肢の意味重複
-- 明らかに不自然な誤答
-- 問題文で正答を示唆
-- 提供情報にない内容を解説へ追加
-- 冗長な表現
+- 曖昧表現
+- knowledge にない情報を追加
+- explanation に選択肢番号を書く
 TEXT;
     }
 
@@ -259,24 +287,27 @@ TEXT;
     {
         return <<<TEXT
 あなたは問題品質検証AIです。
-生成された問題を knowledge と照合してください。
 
-knowledge を唯一の正解根拠とします。
-knowledge にない情報は推論で補わないでください。
+knowledge の Definition を唯一の真実とします。
 
-以下を検証してください。
+以下を厳密に検証してください。
 
-1. knowledgeから正答選択肢を1つ決め、その index を expected_correct_index に出力
-2. 生成AIの explanation がその正答と一致するか
-3. 誤答選択肢は knowledge 上で誤りか
-4. 複数の選択肢が正答になっていないか
+1. 問題文が Definition を問っているか
+2. 正答選択肢が Definition と一致するか
+3. 誤答選択肢が Definition と矛盾するか
+4. explanation が正答と一致するか
+5. 複数正答が存在しないか
 
-以下が1つでもあれば passed=false:
+次の場合 passed=false:
+- question not definition-based
 - correct_index mismatch
 - explanation contradiction
 - multiple possible answers
 - ambiguous wording
 - duplicate options
+
+knowledge にある属性・例・周辺説明を
+Definition と混同してはいけません。
 TEXT;
     }
 
@@ -368,6 +399,7 @@ TEXT;
     private function buildProblemContext(Problem $p, Collection $digests): array
     {
         $digest = $digests->get($p->id);
+
         $knowledge = ($digest && !$digest->isEmpty())
             ? $digest->toPromptText()
             : NoteParser::toPromptText(NoteParser::parse($p->note));
@@ -377,6 +409,15 @@ TEXT;
             'subject' => $p->subject?->name ?? '',
             'sub_category' => $p->subCategory?->name ?? null,
             'question_ref' => $p->question_ref,
+
+            'instruction' => [
+                'use_definition_as_truth',
+                'definition_only',
+                'ignore_examples',
+                'ignore_memory_hooks',
+                'ignore_pitfalls_as_correct_answer',
+            ],
+
             'knowledge' => $knowledge,
         ];
     }
@@ -447,7 +488,20 @@ TEXT;
             'explanation' => $item['explanation'] ?? '',
         ];
 
+        $quiz['explanation'] = $this->sanitizeExplanation(
+            $quiz['explanation']
+        );
+
         return $this->shuffleOptions($quiz);
+    }
+
+    private function sanitizeExplanation(string $text): string
+    {
+        return preg_replace(
+            '/選択肢[0-9０-９]+/',
+            '正答',
+            $text
+        );
     }
 
     private function shuffleOptions(array $quiz): array
