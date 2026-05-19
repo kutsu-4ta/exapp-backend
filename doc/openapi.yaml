@@ -974,6 +974,21 @@ components:
       properties:
         body: { type: string, maxLength: 2000, description: 'ノート本文' }
 
+    Snippet:
+      type: object
+      required: [ id, title, content ]
+      properties:
+        id: { type: integer }
+        title: { type: string, maxLength: 60 }
+        content: { type: string, maxLength: 2000 }
+
+    SnippetInput:
+      type: object
+      required: [ title, content ]
+      properties:
+        title: { type: string, maxLength: 60 }
+        content: { type: string, maxLength: 2000 }
+
 
 paths:
   # ── Stopwatch ─────────────────────────────────────────────────────────────────
@@ -3526,3 +3541,75 @@ paths:
                     example: ログアウトしました。
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # ── Snippets ─────────────────────────────────────────────────────────────────
+
+  /snippets:
+    get:
+      summary: スニペット一覧を取得
+      tags: [ Snippets ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Snippet' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: スニペットを作成
+      tags: [ Snippets ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SnippetInput' }
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /snippets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      summary: スニペットを更新
+      tags: [ Snippets ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SnippetInput' }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      summary: スニペットを削除
+      tags: [ Snippets ]
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
