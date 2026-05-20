@@ -27,6 +27,19 @@ class MorningBugfixController extends Controller
         return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
     }
 
+    private function cleanQuiz(?array $quiz): ?array
+    {
+        if ($quiz === null) {
+            return null;
+        }
+        return [
+            'question'      => $this->cleanUtf8($quiz['question'] ?? ''),
+            'options'       => array_map(fn($o) => $this->cleanUtf8((string) $o), $quiz['options'] ?? []),
+            'correct_index' => (int) ($quiz['correct_index'] ?? 0),
+            'explanation'   => $this->cleanUtf8($quiz['explanation'] ?? ''),
+        ];
+    }
+
     public function show(MorningBugfixRequest $request): JsonResponse
     {
         $user = $request->user() ?? auth('sanctum')->user();
@@ -96,7 +109,7 @@ class MorningBugfixController extends Controller
                     'user_memo'     => $this->cleanUtf8($problem->note),
                     'material_name' => $this->cleanUtf8($problem->material?->name),
                 ],
-                'quiz'               => $quiz,
+                'quiz'               => $this->cleanQuiz($quiz),
                 'last_touched_at'    => $problem->last_touched_at?->toDateString(),
             ];
         })->values()->toArray();
