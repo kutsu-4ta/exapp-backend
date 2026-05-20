@@ -449,7 +449,6 @@ class LocalDevSeeder extends Seeder
     {
         // 平日は通勤 or 夜、たまに昼
         $options = [
-            [TimeSlot::Commute->value, TimeSlot::Night->value],
             [TimeSlot::Night->value],
             [TimeSlot::Lunch->value, TimeSlot::Night->value],
             [TimeSlot::Morning->value, TimeSlot::Night->value],

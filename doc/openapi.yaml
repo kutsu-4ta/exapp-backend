@@ -116,7 +116,7 @@ components:
 
     TimeSlot:
       type: string
-      enum: [ morning, lunch, commute, night ]
+      enum: [ morning, lunch, night ]
     Subject:
       type: string
       description: ユーザーが定義した科目名

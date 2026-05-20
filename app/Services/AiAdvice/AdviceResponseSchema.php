@@ -27,7 +27,7 @@ final class AdviceResponseSchema
                     'items'       => [
                         'type'       => 'object',
                         'properties' => [
-                            'slot'     => ['type' => 'string', 'description' => '時間帯: morning / lunch / commute / evening / night / weekend'],
+                            'slot'     => ['type' => 'string', 'description' => '時間帯: morning / lunch / night'],
                             'subject'  => ['type' => 'string', 'description' => '科目名（例: 財務・会計）'],
                             'material' => ['type' => 'string', 'description' => '教材名（例: スピードテキスト、過去問マスター、問題集）'],
                             'minutes'  => ['type' => 'integer', 'description' => '学習分数'],
@@ -82,7 +82,7 @@ final class AdviceResponseSchema
                     'items'       => [
                         'type'       => 'object',
                         'properties' => [
-                            'slot'     => ['type' => 'string', 'description' => '時間帯: morning / lunch / commute / evening / night / weekend'],
+                            'slot'     => ['type' => 'string', 'description' => '時間帯: morning / lunch / night'],
                             'subject'  => ['type' => 'string', 'description' => '科目名'],
                             'material' => ['type' => 'string', 'description' => '教材名'],
                             'minutes'  => ['type' => 'integer', 'description' => '学習分数'],

@@ -51,7 +51,6 @@ class EloquentPracticeSessionRepository implements PracticeSessionRepositoryInte
         return match (true) {
             $hour >= 5  && $hour < 10 => TimeSlot::Morning,
             $hour >= 10 && $hour < 14 => TimeSlot::Lunch,
-            $hour >= 14 && $hour < 19 => TimeSlot::Commute,
             default                   => TimeSlot::Night,
         };
     }
