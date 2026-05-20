@@ -6,6 +6,7 @@ use App\Models\KnowledgeDigest;
 use App\Models\Problem;
 use App\Models\ProblemQuiz;
 use App\Services\GeminiService;
+use App\Services\NoteParser;
 use Illuminate\Support\Collection;
 
 class GenerateMorningQuizUseCase
@@ -37,94 +38,117 @@ class GenerateMorningQuizUseCase
         $theme = $theme ?? self::FOCUS_THEME;
         $count = $count ?: self::OPTION_COUNT;
 
-        // ─── 1. knowledge_digests が既存のもののみ対象とする ─────────────
-        $digests = KnowledgeDigest::whereIn('problem_id', $problems->pluck('id'))
+        $allProblems = $problems;
+
+        // ─── 1. knowledge_digests を取得し、不足分はオンデマンドでパース ──
+        $digests = KnowledgeDigest::whereIn('problem_id', $allProblems->pluck('id'))
             ->get()
             ->keyBy('problem_id');
 
-        $problems = $problems->filter(
+        // notes に構造化ハッシュタグがあるが DB に digest がない問題を一時補完
+        foreach ($allProblems as $p) {
+            if ($digests->has($p->id) && !$digests->get($p->id)->isEmpty()) {
+                continue;
+            }
+            if (!NoteParser::hasStructuredContent($p->note)) {
+                continue;
+            }
+            $parsed = NoteParser::parse($p->note);
+            if (empty($parsed)) {
+                continue;
+            }
+            $digest = new KnowledgeDigest([
+                'problem_id'   => $p->id,
+                'definitions'  => isset($parsed['definition'])  ? [$parsed['definition']]  : null,
+                'formulas'     => isset($parsed['formula'])      ? [$parsed['formula']]      : null,
+                'keywords'     => isset($parsed['keyword'])      ? [$parsed['keyword']]      : null,
+                'pitfalls'     => isset($parsed['pitfall'])      ? [$parsed['pitfall']]      : null,
+                'examples'     => isset($parsed['example'])      ? [$parsed['example']]      : null,
+                'relations'    => isset($parsed['relation'])     ? [$parsed['relation']]     : null,
+                'memory_hooks' => isset($parsed['memory_hook'])  ? [$parsed['memory_hook']]  : null,
+            ]);
+            if (!$digest->isEmpty()) {
+                $digests->put($p->id, $digest);
+            }
+        }
+
+        $problems = $allProblems->filter(
             fn($p) => $digests->has($p->id) && !$digests->get($p->id)->isEmpty()
         );
 
-        if ($problems->isEmpty()) {
-            return [];
-        }
+        $result = [];
 
-        // ─── 2. PHP 側で quiz コアを組み立て ────────────────────────────
-        $quizCores = $problems->mapWithKeys(
-            fn($p) => [$p->id => $this->buildQuizCore($digests->get($p->id))]
-        );
-
-        // ─── 3. Gemini で quiz 生成 ──────────────────────────────────────
-        $raw = $this->gemini->generateJson(
-            $this->buildSystemInstruction($exam, $theme, $count),
-            $this->buildUserPrompt($problems, $digests, $quizCores, $count),
-            $this->buildResponseSchema($count),
-            $apiKey,
-            $model
-        );
-
-        // ─── 4. PHP 静的バリデーション ＋ スコアリング ──────────────────
-        [$staticPassing, $failing] = $this->applyStaticValidation($raw, $count);
-
-        $highScore = [];
-        $lowScore = [];
-
-        foreach ($staticPassing as $id => $item) {
-            $score = $this->scoreQuiz($item, $digests->get($id));
-            if ($score >= self::SCORE_THRESHOLD) {
-                $highScore[$id] = $item;
-            } else {
-                $lowScore[$id] = $item;
-            }
-        }
-
-        $result = array_map(fn($item) => $this->toQuiz($item), $highScore);
-
-        // ─── 5. スコア不足 + 静的失格 → Gemini で検閲＋修正（同一リクエスト）
-        $toReview = $lowScore + $failing;
-
-        if (!empty($toReview)) {
-            $reviewProblems = $problems->filter(fn($p) => isset($toReview[$p->id]));
-
-            $reviewRaw = $this->validateAndRegenerateRaw(
-                $toReview, $reviewProblems, $digests, $quizCores, $apiKey, $model, $count
+        if ($problems->isNotEmpty()) {
+            // ─── 2. PHP 側で quiz コアを組み立て ────────────────────────
+            $quizCores = $problems->mapWithKeys(
+                fn($p) => [$p->id => $this->buildQuizCore($digests->get($p->id))]
             );
 
-            [$reviewPassing] = $this->applyStaticValidation($reviewRaw, $count);
+            // ─── 3. Gemini で quiz 生成 ──────────────────────────────────
+            $raw = $this->gemini->generateJson(
+                $this->buildSystemInstruction($exam, $theme, $count),
+                $this->buildUserPrompt($problems, $digests, $quizCores, $count),
+                $this->buildResponseSchema($count),
+                $apiKey,
+                $model
+            );
 
-            // passed=true（元のまま）・passed=false（Gemini が修正済み）どちらも採用する
-            // ただし再スコアリングでも閾値未満のものは DB フォールバックへ回す
-            $reviewScoreFailed = [];
+            // ─── 4. PHP 静的バリデーション ＋ スコアリング ──────────────
+            [$staticPassing, $failing] = $this->applyStaticValidation($raw, $count);
 
-            foreach ($reviewPassing as $id => $item) {
-                if ($this->scoreQuiz($item, $digests->get($id)) >= self::SCORE_THRESHOLD) {
-                    $result[$id] = $this->toQuiz($item);
+            $highScore = [];
+            $lowScore  = [];
+
+            foreach ($staticPassing as $id => $item) {
+                $score = $this->scoreQuiz($item, $digests->get($id));
+                if ($score >= self::SCORE_THRESHOLD) {
+                    $highScore[$id] = $item;
                 } else {
-                    $reviewScoreFailed[$id] = $item;
+                    $lowScore[$id] = $item;
                 }
             }
 
-            // ─── 6. 静的バリデーション不通過 + 再スコア失格 → problem_quizzes からフォールバック
-            $stillMissingIds = array_diff(
-                array_keys($toReview),
-                array_keys($result)
-            );
+            $result = array_map(fn($item) => $this->toQuiz($item), $highScore);
 
-            if (!empty($stillMissingIds)) {
-                $saved = ProblemQuiz::whereIn('problem_id', $stillMissingIds)
-                    ->where('quiz_type', 'multiple_choice')
-                    ->orderByDesc('created_at')
-                    ->get()
-                    ->keyBy('problem_id');
+            // ─── 5. スコア不足 + 静的失格 → Gemini で検閲＋修正（同一リクエスト）
+            $toReview = $lowScore + $failing;
 
-                foreach ($stillMissingIds as $id) {
-                    $quiz = $saved->get($id);
-                    if ($quiz === null || $quiz->correct_index === null) {
-                        continue;
+            if (!empty($toReview)) {
+                $reviewProblems = $problems->filter(fn($p) => isset($toReview[$p->id]));
+
+                $reviewRaw = $this->validateAndRegenerateRaw(
+                    $toReview, $reviewProblems, $digests, $quizCores, $apiKey, $model, $count
+                );
+
+                [$reviewPassing] = $this->applyStaticValidation($reviewRaw, $count);
+
+                foreach ($reviewPassing as $id => $item) {
+                    if ($this->scoreQuiz($item, $digests->get($id)) >= self::SCORE_THRESHOLD) {
+                        $result[$id] = $this->toQuiz($item);
                     }
-                    $result[$id] = $this->fromProblemQuiz($quiz);
                 }
+            }
+        }
+
+        // ─── 6. まだカバーされていない全問題を problem_quizzes でフォールバック
+        $uncoveredIds = $allProblems->pluck('id')
+            ->diff(array_keys($result))
+            ->values()
+            ->all();
+
+        if (!empty($uncoveredIds)) {
+            $saved = ProblemQuiz::whereIn('problem_id', $uncoveredIds)
+                ->where('quiz_type', 'multiple_choice')
+                ->orderByDesc('created_at')
+                ->get()
+                ->keyBy('problem_id');
+
+            foreach ($uncoveredIds as $id) {
+                $quiz = $saved->get($id);
+                if ($quiz === null || $quiz->correct_index === null) {
+                    continue;
+                }
+                $result[$id] = $this->fromProblemQuiz($quiz);
             }
         }
 
