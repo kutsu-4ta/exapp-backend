@@ -19,6 +19,14 @@ class MorningBugfixController extends Controller
         private readonly GenerateMorningQuizUseCase   $generateQuiz,
     ) {}
 
+    private function cleanUtf8(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+    }
+
     public function show(MorningBugfixRequest $request): JsonResponse
     {
         $user = $request->user() ?? auth('sanctum')->user();
@@ -80,13 +88,13 @@ class MorningBugfixController extends Controller
 
             return [
                 'id'                 => $problem->id,
-                'subject'            => $problem->subject?->name ?? '',
-                'sub_category'       => $problem->subCategory?->name,
+                'subject'            => $this->cleanUtf8($problem->subject?->name ?? ''),
+                'sub_category'       => $this->cleanUtf8($problem->subCategory?->name),
                 'sub_category_rank'  => $problem->subCategory?->rank?->value,
                 'problem_context'    => [
-                    'original_ref'  => $problem->question_ref,
-                    'user_memo'     => $problem->note,
-                    'material_name' => $problem->material?->name,
+                    'original_ref'  => $this->cleanUtf8($problem->question_ref),
+                    'user_memo'     => $this->cleanUtf8($problem->note),
+                    'material_name' => $this->cleanUtf8($problem->material?->name),
                 ],
                 'quiz'               => $quiz,
                 'last_touched_at'    => $problem->last_touched_at?->toDateString(),

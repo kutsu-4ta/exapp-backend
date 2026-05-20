@@ -10,19 +10,25 @@ namespace App\Services;
  */
 class NoteParser
 {
-    private const SECTION_HEADERS = [
-        'definition'  => '#Definition',
-        'formula'     => '#Formula',
-        'keyword'     => '#Keyword',
-        'pitfall'     => '#Pitfall',
-        'example'     => '#Example',
-        'relation'    => '#Relation',
-        'memory_hook' => '#MemoryHook',
+    private const HASHTAG_PATTERN = '/#(Definition|Formula|Keyword|Pitfall|Example|Relation|MemoryHook)(?=\s|$)/';
+
+    private const TAG_KEY_MAP = [
+        'Definition' => 'definition',
+        'Formula'    => 'formula',
+        'Keyword'    => 'keyword',
+        'Pitfall'    => 'pitfall',
+        'Example'    => 'example',
+        'Relation'   => 'relation',
+        'MemoryHook' => 'memory_hook',
     ];
 
     /**
      * note テキストを構造化データにパースして返す。
-     * ヘッダーが一つも含まれない場合は ['raw' => $note] を返す。
+     *
+     * フリーテキスト中のハッシュタグを検出し、各セクションの内容を抽出する。
+     * - ハッシュタグ直後の空白 or 改行1つはスキップ
+     * - \n\n またはセクション終端でブロック終了
+     * - 同じハッシュタグが複数回出現した場合は最後の値を採用
      *
      * @return array<string, string>
      */
@@ -32,43 +38,39 @@ class NoteParser
             return [];
         }
 
-        if (!self::hasStructuredContent($note)) {
-            return ['raw' => $note];
+        if (!preg_match_all(self::HASHTAG_PATTERN, $note, $matches, PREG_OFFSET_CAPTURE)) {
+            return [];
         }
 
-        $result         = [];
-        $currentKey     = null;
-        $currentLines   = [];
+        $result       = [];
+        $total        = count($matches[0]);
+        $noteLen      = strlen($note);
 
-        foreach (explode("\n", $note) as $line) {
-            $trimmed = trim($line);
-            $matched = false;
+        for ($i = 0; $i < $total; $i++) {
+            $tagName = $matches[1][$i][0];
+            $tagEnd  = $matches[0][$i][1] + strlen($matches[0][$i][0]);
 
-            foreach (self::SECTION_HEADERS as $key => $header) {
-                if (str_starts_with($trimmed, $header)) {
-                    if ($currentKey !== null) {
-                        $content = trim(implode("\n", $currentLines));
-                        if ($content !== '') {
-                            $result[$currentKey] = $content;
-                        }
-                    }
-                    $currentKey   = $key;
-                    $inline       = trim(substr($trimmed, strlen($header)));
-                    $currentLines = $inline !== '' ? [$inline] : [];
-                    $matched      = true;
-                    break;
-                }
+            // ハッシュタグ直後の空白または改行1文字をスキップ
+            $contentStart = $tagEnd;
+            if ($contentStart < $noteLen
+                && ($note[$contentStart] === ' ' || $note[$contentStart] === "\n")
+            ) {
+                $contentStart++;
             }
 
-            if (!$matched && $currentKey !== null) {
-                $currentLines[] = $line;
-            }
-        }
+            // ブロック終端: \n\n (tagEnd 以降で最初に見つかる位置)、次タグ、文字列末尾のうち最も手前
+            $nextTagPos       = ($i + 1 < $total) ? $matches[0][$i + 1][1] : $noteLen;
+            $doubleNewlinePos = strpos($note, "\n\n", $tagEnd);
 
-        if ($currentKey !== null) {
-            $content = trim(implode("\n", $currentLines));
+            $contentEnd = ($doubleNewlinePos !== false && $doubleNewlinePos < $nextTagPos)
+                ? $doubleNewlinePos
+                : $nextTagPos;
+
+            $content = trim(substr($note, $contentStart, max(0, $contentEnd - $contentStart)));
+            $key     = self::TAG_KEY_MAP[$tagName];
+
             if ($content !== '') {
-                $result[$currentKey] = $content;
+                $result[$key] = $content;
             }
         }
 
@@ -83,12 +85,7 @@ class NoteParser
         if (empty($note)) {
             return false;
         }
-        foreach (self::SECTION_HEADERS as $header) {
-            if (str_contains($note, $header)) {
-                return true;
-            }
-        }
-        return false;
+        return (bool) preg_match(self::HASHTAG_PATTERN, $note);
     }
 
     /**

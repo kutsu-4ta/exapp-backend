@@ -2,10 +2,10 @@
 
 namespace App\UseCases\MorningBugfix;
 
+use App\Models\KnowledgeDigest;
 use App\Models\Problem;
+use App\Models\ProblemQuiz;
 use App\Services\GeminiService;
-use App\Services\NoteParser;
-use App\UseCases\KnowledgeDigest\ExtractKnowledgeDigestUseCase;
 use Illuminate\Support\Collection;
 
 class GenerateMorningQuizUseCase
@@ -13,15 +13,15 @@ class GenerateMorningQuizUseCase
     private const EXAM_NAME = '中小企業診断士試験';
     private const FOCUS_THEME = '定義理解';
     private const OPTION_COUNT = 4;
+    private const SCORE_THRESHOLD = 85; // これ未満を Gemini 検閲対象とする
 
     public function __construct(
-        private readonly GeminiService                 $gemini,
-        private readonly ExtractKnowledgeDigestUseCase $extractDigest,
+        private readonly GeminiService $gemini,
     ) {
     }
 
     /**
-     * @param Collection<Problem> $problems
+     * @param Collection<Problem> $problems SelectMorningProblemsUseCase の結果
      * @return array  問題IDをキーとした quiz データ配列
      */
     public function __invoke(
@@ -37,138 +37,185 @@ class GenerateMorningQuizUseCase
         $theme = $theme ?? self::FOCUS_THEME;
         $count = $count ?: self::OPTION_COUNT;
 
-        // ─── 1. Knowledge Digest をオンデマンド取得 ───────────────────────
-        $digests = ($this->extractDigest)($problems, $apiKey, $model);
+        // ─── 1. knowledge_digests が既存のもののみ対象とする ─────────────
+        $digests = KnowledgeDigest::whereIn('problem_id', $problems->pluck('id'))
+            ->get()
+            ->keyBy('problem_id');
 
-        // ─── 2. 1回目: 生成 ──────────────────────────────────────────────
+        $problems = $problems->filter(
+            fn($p) => $digests->has($p->id) && !$digests->get($p->id)->isEmpty()
+        );
+
+        if ($problems->isEmpty()) {
+            return [];
+        }
+
+        // ─── 2. PHP 側で quiz コアを組み立て ────────────────────────────
+        $quizCores = $problems->mapWithKeys(
+            fn($p) => [$p->id => $this->buildQuizCore($digests->get($p->id))]
+        );
+
+        // ─── 3. Gemini で quiz 生成 ──────────────────────────────────────
         $raw = $this->gemini->generateJson(
             $this->buildSystemInstruction($exam, $theme, $count),
-            $this->buildUserPrompt($problems, $digests, $count),
+            $this->buildUserPrompt($problems, $digests, $quizCores, $count),
             $this->buildResponseSchema($count),
             $apiKey,
             $model
         );
 
-        // ─── 3. PHP 静的バリデーション ───────────────────────────────────
+        // ─── 4. PHP 静的バリデーション ＋ スコアリング ──────────────────
         [$staticPassing, $failing] = $this->applyStaticValidation($raw, $count);
 
-        // ─── 4. Validator AI ─────────────────────────────────────────────
-        $passing = [];
-        if (!empty($staticPassing)) {
-            $validationResults = $this->validateGeneratedQuizzes(
-                $staticPassing, $problems, $digests, $apiKey, $model
-            );
-            foreach ($staticPassing as $id => $item) {
-                $result = $validationResults[$id] ?? null;
-                if ($result['passed'] ?? false) {
-                    $passing[$id] = $this->toQuiz($item);
+        $highScore = [];
+        $lowScore = [];
 
-                } elseif (
-                    in_array('correct_index mismatch', $result['fatal_errors'] ?? [], true)
-                    && ($result['confidence'] ?? 0) >= 90
-                    && isset($result['expected_correct_index'])
-                ) {
-                    // Validator の正解で補正
-                    $item['correct_index'] = $result['expected_correct_index'];
-
-                    $passing[$id] = $this->toQuiz($item);
-
-                } else {
-                    $failing[$id] = array_merge(
-                        $item,
-                        ['fatal_errors' => $result['fatal_errors'] ?? []]
-                    );
-                }
+        foreach ($staticPassing as $id => $item) {
+            $score = $this->scoreQuiz($item, $digests->get($id));
+            if ($score >= self::SCORE_THRESHOLD) {
+                $highScore[$id] = $item;
+            } else {
+                $lowScore[$id] = $item;
             }
         }
 
-        // ─── 5. 失格問題を再生成（最大1回） ─────────────────────────────
-        if (!empty($failing)) {
-            $failingProblems = $problems->filter(fn($p) => isset($failing[$p->id]));
+        $result = array_map(fn($item) => $this->toQuiz($item), $highScore);
 
-            $regenRaw = $this->regenerateRaw(
-                $failingProblems, $digests, $failing, $apiKey, $model, $exam, $theme, $count
+        // ─── 5. スコア不足 + 静的失格 → Gemini で検閲＋修正（同一リクエスト）
+        $toReview = $lowScore + $failing;
+
+        if (!empty($toReview)) {
+            $reviewProblems = $problems->filter(fn($p) => isset($toReview[$p->id]));
+
+            $reviewRaw = $this->validateAndRegenerateRaw(
+                $toReview, $reviewProblems, $digests, $quizCores, $apiKey, $model, $count
             );
 
-            [$regenStaticPassing] = $this->applyStaticValidation($regenRaw, $count);
+            [$reviewPassing] = $this->applyStaticValidation($reviewRaw, $count);
 
-            if (!empty($regenStaticPassing)) {
-                $regenValidation = $this->validateGeneratedQuizzes(
-                    $regenStaticPassing, $problems, $digests, $apiKey, $model
-                );
-                foreach ($regenStaticPassing as $id => $item) {
-                    if ($regenValidation[$id]['passed'] ?? false) {
-                        $passing[$id] = $this->toQuiz($item);
+            // passed=true（元のまま）・passed=false（Gemini が修正済み）どちらも採用する
+            foreach ($reviewPassing as $id => $item) {
+                $result[$id] = $this->toQuiz($item);
+            }
+
+            // ─── 6. 修正後も静的バリデーション不通過 → problem_quizzes からフォールバック
+            $stillMissingIds = array_diff(array_keys($toReview), array_keys($reviewPassing));
+
+            if (!empty($stillMissingIds)) {
+                $saved = ProblemQuiz::whereIn('problem_id', $stillMissingIds)
+                    ->where('quiz_type', 'multiple_choice')
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->keyBy('problem_id');
+
+                foreach ($stillMissingIds as $id) {
+                    $quiz = $saved->get($id);
+                    if ($quiz === null || $quiz->correct_index === null) {
+                        continue;
                     }
-                    // passed=false → 破棄
+                    $result[$id] = $this->fromProblemQuiz($quiz);
                 }
             }
         }
 
-        return $passing;
+        return $result;
     }
 
-    // ── 再生成（2回目コール）────────────────────────────────────────────────
+    // ── quiz コア組み立て（PHP 側）────────────────────────────────────────────
 
-    private function regenerateRaw(
-        Collection $failingProblems,
+    private function buildQuizCore(KnowledgeDigest $digest): array
+    {
+        $definitions = array_values(array_filter($digest->definitions ?? []));
+        $keywords = array_values(array_filter($digest->keywords ?? []));
+        $pitfalls = array_values(array_filter($digest->pitfalls ?? []));
+        $relations = array_values(array_filter($digest->relations ?? []));
+
+        // 正答ヒント：最初の定義文を使用
+        $answerHint = $definitions[0] ?? null;
+
+        // 誤答候補：混同しやすい誤解（pitfalls）を優先し、関連概念・重要語を補完
+        $distractorCandidates = array_values(array_filter(
+            array_unique(array_merge(
+                array_slice($pitfalls, 0, 2),
+                array_slice($relations, 0, 2),
+                array_slice($keywords, 0, 2),
+            )),
+            fn($x) => !str_contains($answerHint ?? '', $x)
+        ));
+
+        // 混同ポイント：間違えやすい点から
+        $commonMistakes = array_slice($pitfalls, 0, 2);
+
+        return array_filter([
+            'answer_hint' => $answerHint,
+            'distractor_candidates' => $distractorCandidates ?: null,
+            'common_mistakes' => $commonMistakes ?: null,
+        ], fn($v) => $v !== null);
+    }
+
+    // ── スコアリング ───────────────────────────────────────────────────────────
+
+    private function scoreQuiz(array $item, ?KnowledgeDigest $digest): int
+    {
+        $score = 100;
+
+        $question = $item['question'] ?? '';
+        $explanation = $item['explanation'] ?? '';
+
+        // 問題文が定義問題の形式でない
+        if (!preg_match('/定義として.{0,20}適切|に関する記述として.{0,20}適切/u', $question)) {
+            $score -= 20;
+        }
+
+        // 説明文が短すぎる
+        if (mb_strlen($explanation) < 30) {
+            $score -= 25;
+        }
+
+        // 説明文に知識の用語が含まれていない
+        if ($digest !== null) {
+            $terms = array_values(array_filter(array_merge(
+                $digest->definitions ?? [],
+                $digest->keywords ?? [],
+            )));
+
+            $matched = false;
+            foreach ($terms as $term) {
+                $len = mb_strlen($term);
+                $snippet = mb_substr($term, 0, max(3, (int)floor($len * 0.4)));
+                if ($snippet !== '' && str_contains($explanation, $snippet)) {
+                    $matched = true;
+                    break;
+                }
+            }
+
+            if (!$matched) {
+                $score -= 20;
+            }
+        }
+
+        return max(0, $score);
+    }
+
+    // ── 検閲＋修正（2回目コール、同一リクエスト）──────────────────────────────
+
+    private function validateAndRegenerateRaw(
+        array      $items,
+        Collection $problems,
         Collection $digests,
-        array      $failingItems,
+        Collection $quizCores,
         ?string    $apiKey,
         ?string    $model,
-        string     $exam,
-        string     $theme,
         int        $count
     ): array
     {
         return $this->gemini->generateJson(
-            $this->buildSystemInstruction($exam, $theme, $count),
-            $this->buildRegeneratePrompt($failingProblems, $digests, $failingItems, $count),
-            $this->buildResponseSchema($count),
+            $this->buildReviewSystemInstruction($count),
+            $this->buildReviewPrompt($items, $problems, $digests, $quizCores, $count),
+            $this->buildReviewResponseSchema($count),
             $apiKey,
             $model
         );
-    }
-
-    // ── Validator AI ─────────────────────────────────────────────────────────
-
-    /**
-     * @return array  [problem_id => ['passed' => bool, 'fatal_errors' => string[], 'confidence' => int]]
-     */
-    private function validateGeneratedQuizzes(
-        array      $generated,
-        Collection $problems,
-        Collection $digests,
-        ?string    $apiKey,
-        ?string    $model,
-): array {
-        $raw = $this->gemini->generateJson(
-            $this->buildValidationSystemInstruction(),
-            $this->buildValidationPrompt($generated, $problems, $digests),
-            $this->buildValidationResponseSchema(),
-            $apiKey,
-            $model
-        );
-
-        $results = [];
-
-        foreach ($raw as $item) {
-            $id = (int)($item['problem_id'] ?? 0);
-
-            if ($id <= 0) {
-                continue;
-            }
-
-            $results[$id] = [
-                'passed' => (bool)($item['passed'] ?? false),
-                'expected_correct_index' =>
-                    (int)($item['expected_correct_index'] ?? -1),
-                'fatal_errors' => $item['fatal_errors'] ?? [],
-                'confidence' => (int)($item['confidence'] ?? 0),
-            ];
-        }
-
-        return $results;
     }
 
     // ── PHP 静的バリデーション ────────────────────────────────────────────────
@@ -187,25 +234,21 @@ class GenerateMorningQuizUseCase
                 continue;
             }
 
-            if ($this->passesStaticValidation($item, $count)) {
+            $errors = $this->staticErrors($item, $count);
+
+            if (empty($errors)) {
                 $passing[$id] = $item;
             } else {
-                $failing[$id] = array_merge($item, ['fatal_errors' => $this->staticErrors($item, $count)]);
+                $failing[$id] = array_merge($item, ['fatal_errors' => $errors]);
             }
         }
 
         return [$passing, $failing];
     }
 
-    private function passesStaticValidation(array $item, int $count): bool
-    {
-        return empty($this->staticErrors($item, $count));
-    }
-
     private function staticErrors(array $item, int $count): array
     {
         $errors = [];
-
         $options = $item['options'] ?? [];
         $correctIndex = (int)($item['correct_index'] ?? -1);
 
@@ -221,16 +264,9 @@ class GenerateMorningQuizUseCase
             $errors[] = 'duplicate options';
         }
 
-        $lengths = array_map(
-            fn($o) => mb_strlen($o),
-            $options
-        );
-
-        if (!empty($lengths)) {
-            $max = max($lengths);
-            $min = min($lengths);
-
-            if ($max - $min > 25) {
+        if (!empty($options)) {
+            $lengths = array_map(fn($o) => mb_strlen($o), $options);
+            if (max($lengths) - min($lengths) > 25) {
                 $errors[] = 'option length imbalance';
             }
         }
@@ -238,148 +274,101 @@ class GenerateMorningQuizUseCase
         return $errors;
     }
 
-    // ── プロンプト構築 ───────────────────────────────────────────────────────
+    // ── プロンプト構築 ────────────────────────────────────────────────────────
 
     private function buildSystemInstruction(string $exam, string $theme, int $count): string
     {
         $maxIndex = $count - 1;
 
         return <<<TEXT
-あなたは{$exam}の問題生成AIです。
-「{$theme}」を問う{$count}択選択問題を日本語で生成してください。
+        あなたは{$exam}の問題生成AIです。
+        「{$theme}」を問う{$count}択選択問題を日本語で生成してください。
 
-【最重要ルール】
-この問題は「用語の定義」を問うこと。
-知識の中心概念（Definition）そのものを聞くこと。
+        【最重要ルール】
+        knowledge 内の [定義] セクションを唯一の真実として扱うこと。
+        [定義] がない場合は [公式] を代わりに使用すること。
+        問題は「用語の定義そのもの」を問うこと。
 
-問題文は必ず次の形式に近づけること：
-「◯◯に関する記述として最も適切なものはどれか」
-または
-「◯◯の定義として最も適切なものはどれか」
+        問題文は必ず次の形式に近づけること：
+        「◯◯に関する記述として最も適切なものはどれか」
+        または
+        「◯◯の定義として最も適切なものはどれか」
 
-【選択肢ルール】
-- 正答は Definition の本文を言い換えたもの
-- 誤答も Definition に近い別概念にする
-- 属性・効果・例・制度要件を正答にしてはいけない
-- 全選択肢は同じ粒度にする
-- 選択肢の長さを揃える
-- 選択肢同士で意味が重複しない
+        【quiz_core の使い方】
+        - answer_hint：正答選択肢の根拠として使用する
+        - distractor_candidates：誤答選択肢の材料として参照する
+        - common_mistakes：誤答が「定義と混同しやすい概念」になるよう誘導する
 
-【explanationルール】
-必ず以下を含める：
-- 正答が正しい理由
-- 各誤答がなぜ誤りか
-- knowledge 内の定義・キーワードのみを使う
+        【correct_index の決定手順（必ず守ること）】
+        1. knowledge の [定義] と quiz_core.answer_hint を確認する
+        2. options の中から [定義] の言い換えとなる選択肢を1つ特定する
+        3. その選択肢のインデックス（0始まり、最大{$maxIndex}）を correct_index にセットする
+        4. 自己検証：options[correct_index] が [定義] と意味的に一致しているか確認する
+        5. 一致していない場合は correct_index を修正してから出力する
 
-【correct_index】
-0始まり（0〜{$maxIndex}）
+        【選択肢ルール】
+        - 正答は [定義] の本文を言い換えたもの
+        - 誤答は [定義] と紛らわしい別概念・別制度・別要件にする
+        - 属性・効果・具体例・制度要件を正答にしてはいけない
+        - 全選択肢を同じ粒度・同じ文体にする
+        - 選択肢の長さを揃える（文字数差25字以内）
+        - 選択肢同士で意味が重複しない
 
-【禁止】
-- Definition以外を正答にする
-- 複数正答
-- 曖昧表現
-- knowledge にない情報を追加
-- explanation に選択肢番号を書く
-TEXT;
+        【explanation ルール】
+        - 正答が正しい理由を knowledge の定義内容を引用しながら説明する
+        - 各誤答がなぜ誤りか、何と混同しやすいかを説明する
+        - knowledge 内の情報のみを使い、外部知識を追加しない
+        - 選択肢を指す際は必ず「正答」「誤答の選択肢」と表現すること
+        - 「選択肢1」「①」「A」などの番号・記号は一切使わないこと
+
+        【禁止】
+        - [定義] 以外を正答にする
+        - 複数の正答が存在する問題を作る
+        - 曖昧な表現を使う
+        - knowledge にない情報を追加する
+        TEXT;
     }
 
-    private function buildValidationSystemInstruction(): string
+    private function buildReviewSystemInstruction(int $count): string
     {
-        return <<<TEXT
-あなたは問題品質検証AIです。
-
-knowledge の Definition を唯一の真実とします。
-
-以下を厳密に検証してください。
-
-1. 問題文が Definition を問っているか
-2. 正答選択肢が Definition と一致するか
-3. 誤答選択肢が Definition と矛盾するか
-4. explanation が正答と一致するか
-5. 複数正答が存在しないか
-
-次の場合 passed=false:
-- question not definition-based
-- correct_index mismatch
-- explanation contradiction
-- multiple possible answers
-- ambiguous wording
-- duplicate options
-
-knowledge にある属性・例・周辺説明を
-Definition と混同してはいけません。
-TEXT;
-    }
-
-    private function buildUserPrompt(Collection $problems, Collection $digests, int $count): string
-    {
-        $items = $problems->map(fn(Problem $p) => $this->buildProblemContext($p, $digests))
-            ->values()->toArray();
-
-        $json = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $itemCount = $problems->count();
+        $maxIndex = $count - 1;
 
         return <<<TEXT
-以下の {$itemCount} 件の知識に対して、それぞれ定義理解を問う{$count}択問題を生成してください。
+        あなたは問題品質検証・修正AIです。
+        knowledge の [定義] を唯一の真実として、渡された各選択問題を検証してください。
 
-{$json}
+        【検証基準（以下のいずれかに該当すれば passed=false）】
+        - 問題文が [定義] を問うていない
+        - 正答選択肢が [定義] と一致しない（correct_index mismatch）
+        - 誤答選択肢が [定義] と一致してしまっている（複数正答）
+        - explanation が正答と矛盾している
+        - 選択肢に重複がある
 
-各問題について problem_id, question, options（{$count}要素の配列）, correct_index, explanation を返してください。
-TEXT;
+        【出力ルール】
+        - passed=true：元の quiz 内容をそのまま返してよい
+        - passed=false：previous_errors と knowledge を参考に {$count} 択問題を修正して返す
+        - quiz_core.answer_hint を正答の根拠として使用する
+        - quiz_core.distractor_candidates を誤答の材料として使用する
+
+        【correct_index の決定手順（必ず守ること）】
+        1. [定義] と quiz_core.answer_hint を確認する
+        2. options の中から [定義] の言い換えとなる選択肢を1つ特定する
+        3. その選択肢のインデックス（0始まり、最大{$maxIndex}）を correct_index にセットする
+        4. 自己検証：options[correct_index] が [定義] と意味的に一致しているか確認する
+        5. 一致していない場合は correct_index を修正してから出力する
+        TEXT;
     }
 
-    private function buildValidationPrompt(array $generated, Collection $problems, Collection $digests): string
-    {
-        $byId = $problems->keyBy('id');
-        $items = [];
-
-        foreach ($generated as $id => $quiz) {
-            $problem = $byId->get($id);
-            if (!$problem) {
-                continue;
-            }
-
-            $digest = $digests->get($id);
-            $knowledge = ($digest && !$digest->isEmpty())
-                ? $digest->toPromptText()
-                : NoteParser::toPromptText(NoteParser::parse($problem->note));
-
-            $items[] = [
-                'problem_id' => $id,
-                'knowledge' => $knowledge,
-                'question' => $quiz['question'] ?? '',
-                'options' => $quiz['options'] ?? [],
-                'correct_index' => $quiz['correct_index'] ?? 0,
-                'explanation' => $quiz['explanation'] ?? '',
-            ];
-        }
-
-        $json = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $itemCount = count($items);
-
-        return <<<TEXT
-以下の {$itemCount} 件の生成問題を検証してください。
-knowledge を唯一の正解根拠として照合してください。
-
-{$json}
-
-各問題について problem_id, passed, fatal_errors, confidence を返してください。
-TEXT;
-    }
-
-    private function buildRegeneratePrompt(
+    private function buildUserPrompt(
         Collection $problems,
         Collection $digests,
-        array      $failingItems,
+        Collection $quizCores,
         int        $count
     ): string
     {
-        $items = $problems->map(function (Problem $p) use ($digests, $failingItems) {
+        $items = $problems->map(function (Problem $p) use ($digests, $quizCores) {
             $context = $this->buildProblemContext($p, $digests);
-            $errors = $failingItems[$p->id]['fatal_errors'] ?? [];
-            if (!empty($errors)) {
-                $context['previous_errors'] = $errors;
-            }
+            $context['quiz_core'] = $quizCores->get($p->id, []);
             return $context;
         })->values()->toArray();
 
@@ -387,29 +376,79 @@ TEXT;
         $itemCount = $problems->count();
 
         return <<<TEXT
-以下の {$itemCount} 件の問題は品質基準を満たしませんでした。
-previous_errors を参照して改善し、{$count}択問題を再生成してください。
+        以下の {$itemCount} 件の knowledge に対して、それぞれ [定義] を問う {$count} 択問題を生成してください。
 
-{$json}
+        quiz_core.answer_hint を正答の根拠として使用し、
+        quiz_core.distractor_candidates を誤答の材料として参照し、
+        quiz_core.common_mistakes が存在する場合は誤答が混同しやすいポイントになるよう誘導してください。
 
-各問題について problem_id, question, options（{$count}要素の配列）, correct_index, explanation を返してください。
-TEXT;
+        {$json}
+
+        各問題について problem_id, question, options（{$count} 要素の配列）, correct_index, explanation を返してください。
+        TEXT;
+    }
+
+    private function buildReviewPrompt(
+        array      $items,
+        Collection $problems,
+        Collection $digests,
+        Collection $quizCores,
+        int        $count
+    ): string
+    {
+        $byId = $problems->keyBy('id');
+        $rows = [];
+
+        foreach ($items as $id => $quiz) {
+            $problem = $byId->get($id);
+            if (!$problem) {
+                continue;
+            }
+
+            $row = [
+                'problem_id' => $id,
+                'subject' => $problem->subject?->name ?? '',
+                'sub_category' => $problem->subCategory?->name ?? null,
+                'question_ref' => $problem->question_ref,
+                'knowledge' => $digests->get($id)?->toPromptText() ?? '',
+                'quiz_core' => $quizCores->get($id, []),
+                'original_quiz' => [
+                    'question' => $quiz['question'] ?? '',
+                    'options' => $quiz['options'] ?? [],
+                    'correct_index' => $quiz['correct_index'] ?? 0,
+                    'explanation' => $quiz['explanation'] ?? '',
+                ],
+            ];
+
+            $errors = $quiz['fatal_errors'] ?? [];
+            if (!empty($errors)) {
+                $row['previous_errors'] = $errors;
+            }
+
+            $rows[] = $row;
+        }
+
+        $json = json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $itemCount = count($rows);
+
+        return <<<TEXT
+        以下の {$itemCount} 件の問題を検証し、問題があれば修正した問題を返してください。
+        問題がない場合は元の内容をそのまま返してください。
+        knowledge の [定義] を唯一の正解根拠として照合してください。
+
+        {$json}
+
+        各問題について problem_id, passed, question, options（{$count} 要素の配列）, correct_index, explanation を返してください。
+        TEXT;
     }
 
     private function buildProblemContext(Problem $p, Collection $digests): array
     {
-        $digest = $digests->get($p->id);
-
-        $knowledge = ($digest && !$digest->isEmpty())
-            ? $digest->toPromptText()
-            : NoteParser::toPromptText(NoteParser::parse($p->note));
-
         return [
             'problem_id' => $p->id,
             'subject' => $p->subject?->name ?? '',
             'sub_category' => $p->subCategory?->name ?? null,
             'question_ref' => $p->question_ref,
-
             'instruction' => [
                 'use_definition_as_truth',
                 'definition_only',
@@ -417,12 +456,11 @@ TEXT;
                 'ignore_memory_hooks',
                 'ignore_pitfalls_as_correct_answer',
             ],
-
-            'knowledge' => $knowledge,
+            'knowledge' => $digests->get($p->id)?->toPromptText() ?? '',
         ];
     }
 
-    // ── スキーマ ─────────────────────────────────────────────────────────────
+    // ── スキーマ ──────────────────────────────────────────────────────────────
 
     private function buildResponseSchema(int $count): array
     {
@@ -434,8 +472,10 @@ TEXT;
                     'problem_id' => ['type' => 'INTEGER'],
                     'question' => ['type' => 'STRING'],
                     'options' => [
-                        'type' => 'ARRAY',
-                        'items' => ['type' => 'STRING'],
+                        'type'     => 'ARRAY',
+                        'items'    => ['type' => 'STRING'],
+                        'minItems' => $count,
+                        'maxItems' => $count,
                     ],
                     'correct_index' => ['type' => 'INTEGER'],
                     'explanation' => ['type' => 'STRING'],
@@ -445,7 +485,7 @@ TEXT;
         ];
     }
 
-    private function buildValidationResponseSchema(): array
+    private function buildReviewResponseSchema(int $count): array
     {
         return [
             'type' => 'ARRAY',
@@ -453,31 +493,23 @@ TEXT;
                 'type' => 'OBJECT',
                 'properties' => [
                     'problem_id' => ['type' => 'INTEGER'],
-
                     'passed' => ['type' => 'BOOLEAN'],
-
-                    // Validator が判断した正しい index
-                    'expected_correct_index' => ['type' => 'INTEGER'],
-
-                    'fatal_errors' => [
-                        'type' => 'ARRAY',
-                        'items' => ['type' => 'STRING'],
+                    'question' => ['type' => 'STRING'],
+                    'options' => [
+                        'type'     => 'ARRAY',
+                        'items'    => ['type' => 'STRING'],
+                        'minItems' => $count,
+                        'maxItems' => $count,
                     ],
-
-                    'confidence' => ['type' => 'INTEGER'],
+                    'correct_index' => ['type' => 'INTEGER'],
+                    'explanation' => ['type' => 'STRING'],
                 ],
-                'required' => [
-                    'problem_id',
-                    'passed',
-                    'expected_correct_index',
-                    'fatal_errors',
-                    'confidence',
-                ],
+                'required' => ['problem_id', 'passed', 'question', 'options', 'correct_index', 'explanation'],
             ],
         ];
     }
 
-    // ── ヘルパー ─────────────────────────────────────────────────────────────
+    // ── ヘルパー ──────────────────────────────────────────────────────────────
 
     private function toQuiz(array $item): array
     {
@@ -488,51 +520,72 @@ TEXT;
             'explanation' => $item['explanation'] ?? '',
         ];
 
-        $quiz['explanation'] = $this->sanitizeExplanation(
-            $quiz['explanation']
-        );
+        $quiz['explanation'] = $this->sanitizeExplanation($quiz['explanation'], $quiz['correct_index']);
 
         return $this->shuffleOptions($quiz);
     }
 
-    private function sanitizeExplanation(string $text): string
+    private function fromProblemQuiz(ProblemQuiz $quiz): array
     {
-        return preg_replace(
-            '/選択肢[0-9０-９]+/',
-            '正答',
+        $correctIndex = (int) $quiz->correct_index;
+
+        return $this->shuffleOptions([
+            'question'      => $quiz->question,
+            'options'       => $quiz->options ?? [],
+            'correct_index' => $correctIndex,
+            'explanation'   => $this->sanitizeExplanation($quiz->explanation, $correctIndex),
+        ]);
+    }
+
+    private function sanitizeExplanation(string $text, int $correctIndex): string
+    {
+        $correctNumber = $correctIndex + 1; // Gemini は 1-based で番号を使う
+
+        // ①②③④ → 正答 or 誤答の選択肢
+        $circleMap = ['①' => 1, '②' => 2, '③' => 3, '④' => 4];
+        $text = preg_replace_callback('/[①②③④]/u', function (array $m) use ($correctNumber, $circleMap) {
+            return ($circleMap[$m[0]] ?? 0) === $correctNumber ? '正答' : '誤答の選択肢';
+        }, $text);
+
+        // 選択肢X / 第X選択肢（数字・アルファベット、全角半角）→ 正答 or 誤答の選択肢
+        $text = preg_replace_callback(
+            '/(?:選択肢|第)([0-9０-９]+|[A-DＡ-Ｄ])(?:選択肢)?/u',
+            function (array $m) use ($correctNumber) {
+                $raw        = mb_convert_kana($m[1], 'na'); // 全角→半角
+                $num        = is_numeric($raw)
+                    ? (int) $raw
+                    : (ord(strtoupper($raw)) - ord('A') + 1); // A=1, B=2...
+                return $num === $correctNumber ? '正答' : '誤答の選択肢';
+            },
             $text
         );
+
+        // [定義] リテラルが explanation に漏れてくる場合を後処理で除去
+        return str_replace('[定義]', '定義', $text);
     }
 
     private function shuffleOptions(array $quiz): array
     {
-        $options = $quiz['options'];
-        $correct = $quiz['correct_index'];
+        $indexed = [];
 
-        $correctText = $options[$correct];
+        foreach ($quiz['options'] as $i => $text) {
+            $indexed[] = [
+                'text' => $text,
+                'is_correct' => $i === $quiz['correct_index'],
+            ];
+        }
 
-        shuffle($options);
+        shuffle($indexed);
 
-        $quiz['options'] = $options;
-        $quiz['correct_index'] = array_search($correctText, $options, true);
+        $quiz['options'] = array_column($indexed, 'text');
 
-        return $quiz;
-    }
-
-    private function containsKnowledgeKeyword(
-        string $explanation,
-        string $knowledge
-    ): bool
-    {
-        preg_match_all('/\[KeyWord\](.+)/u', $knowledge, $m);
-
-        foreach ($m[1] ?? [] as $keyword) {
-            $keyword = trim($keyword);
-            if ($keyword !== '' && str_contains($explanation, $keyword)) {
-                return true;
+        foreach ($indexed as $i => $row) {
+            if ($row['is_correct']) {
+                $quiz['correct_index'] = $i;
+                break;
             }
         }
 
-        return false;
+        return $quiz;
     }
 }
