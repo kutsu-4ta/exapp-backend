@@ -13,7 +13,7 @@ class GenerateMorningQuizUseCase
     private const EXAM_NAME = '中小企業診断士試験';
     private const FOCUS_THEME = '定義理解';
     private const OPTION_COUNT = 4;
-    private const SCORE_THRESHOLD = 85; // これ未満を Gemini 検閲対象とする
+    private const SCORE_THRESHOLD = 20; // これ未満を Gemini 検閲対象とする
 
     public function __construct(
         private readonly GeminiService $gemini,
@@ -94,12 +94,22 @@ class GenerateMorningQuizUseCase
             [$reviewPassing] = $this->applyStaticValidation($reviewRaw, $count);
 
             // passed=true（元のまま）・passed=false（Gemini が修正済み）どちらも採用する
+            // ただし再スコアリングでも閾値未満のものは DB フォールバックへ回す
+            $reviewScoreFailed = [];
+
             foreach ($reviewPassing as $id => $item) {
-                $result[$id] = $this->toQuiz($item);
+                if ($this->scoreQuiz($item, $digests->get($id)) >= self::SCORE_THRESHOLD) {
+                    $result[$id] = $this->toQuiz($item);
+                } else {
+                    $reviewScoreFailed[$id] = $item;
+                }
             }
 
-            // ─── 6. 修正後も静的バリデーション不通過 → problem_quizzes からフォールバック
-            $stillMissingIds = array_diff(array_keys($toReview), array_keys($reviewPassing));
+            // ─── 6. 静的バリデーション不通過 + 再スコア失格 → problem_quizzes からフォールバック
+            $stillMissingIds = array_diff(
+                array_keys($toReview),
+                array_keys($result)
+            );
 
             if (!empty($stillMissingIds)) {
                 $saved = ProblemQuiz::whereIn('problem_id', $stillMissingIds)
@@ -177,6 +187,8 @@ class GenerateMorningQuizUseCase
             $terms = array_values(array_filter(array_merge(
                 $digest->definitions ?? [],
                 $digest->keywords ?? [],
+                $digest->pitfalls ?? [],
+                $digest->relations ?? [],
             )));
 
             $matched = false;
@@ -260,7 +272,11 @@ class GenerateMorningQuizUseCase
             $errors[] = 'correct_index out of range';
         }
 
-        if (count(array_unique($options)) !== count($options)) {
+        $normalized = array_map(
+            fn($o) => preg_replace('/\s+/u', '', trim($o)),
+            $options
+        );
+        if (count(array_unique($normalized)) !== count($normalized)) {
             $errors[] = 'duplicate options';
         }
 
@@ -472,8 +488,8 @@ class GenerateMorningQuizUseCase
                     'problem_id' => ['type' => 'INTEGER'],
                     'question' => ['type' => 'STRING'],
                     'options' => [
-                        'type'     => 'ARRAY',
-                        'items'    => ['type' => 'STRING'],
+                        'type' => 'ARRAY',
+                        'items' => ['type' => 'STRING'],
                         'minItems' => $count,
                         'maxItems' => $count,
                     ],
@@ -496,8 +512,8 @@ class GenerateMorningQuizUseCase
                     'passed' => ['type' => 'BOOLEAN'],
                     'question' => ['type' => 'STRING'],
                     'options' => [
-                        'type'     => 'ARRAY',
-                        'items'    => ['type' => 'STRING'],
+                        'type' => 'ARRAY',
+                        'items' => ['type' => 'STRING'],
                         'minItems' => $count,
                         'maxItems' => $count,
                     ],
@@ -527,13 +543,13 @@ class GenerateMorningQuizUseCase
 
     private function fromProblemQuiz(ProblemQuiz $quiz): array
     {
-        $correctIndex = (int) $quiz->correct_index;
+        $correctIndex = (int)$quiz->correct_index;
 
         return $this->shuffleOptions([
-            'question'      => $quiz->question,
-            'options'       => $quiz->options ?? [],
+            'question' => $quiz->question,
+            'options' => $quiz->options ?? [],
             'correct_index' => $correctIndex,
-            'explanation'   => $this->sanitizeExplanation($quiz->explanation, $correctIndex),
+            'explanation' => $this->sanitizeExplanation($quiz->explanation, $correctIndex),
         ]);
     }
 
@@ -551,9 +567,9 @@ class GenerateMorningQuizUseCase
         $text = preg_replace_callback(
             '/(?:選択肢|第)([0-9０-９]+|[A-DＡ-Ｄ])(?:選択肢)?/u',
             function (array $m) use ($correctNumber) {
-                $raw        = mb_convert_kana($m[1], 'na'); // 全角→半角
-                $num        = is_numeric($raw)
-                    ? (int) $raw
+                $raw = mb_convert_kana($m[1], 'na'); // 全角→半角
+                $num = is_numeric($raw)
+                    ? (int)$raw
                     : (ord(strtoupper($raw)) - ord('A') + 1); // A=1, B=2...
                 return $num === $correctNumber ? '正答' : '誤答の選択肢';
             },
