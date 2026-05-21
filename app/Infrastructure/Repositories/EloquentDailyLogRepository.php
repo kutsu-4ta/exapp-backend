@@ -16,6 +16,9 @@ class EloquentDailyLogRepository implements DailyLogRepositoryInterface
             ->whereMonth('date', $month)
             ->withSum('studySessions', 'minutes')
             ->withCount('studySessions')
+            ->withSum(['studySessions as morning_minutes' => fn ($q) => $q->where('time_slot', 'morning')], 'minutes')
+            ->withSum(['studySessions as lunch_minutes'   => fn ($q) => $q->where('time_slot', 'lunch')],   'minutes')
+            ->withSum(['studySessions as night_minutes'   => fn ($q) => $q->where('time_slot', 'night')],   'minutes')
             ->orderBy('date')
             ->get();
     }
@@ -83,6 +86,9 @@ class EloquentDailyLogRepository implements DailyLogRepositoryInterface
             ->when($before, fn ($q) => $q->where('date', '<', $before))
             ->withSum('studySessions', 'minutes')
             ->withCount('studySessions')
+            ->withSum(['studySessions as morning_minutes' => fn ($q) => $q->where('time_slot', 'morning')], 'minutes')
+            ->withSum(['studySessions as lunch_minutes'   => fn ($q) => $q->where('time_slot', 'lunch')],   'minutes')
+            ->withSum(['studySessions as night_minutes'   => fn ($q) => $q->where('time_slot', 'night')],   'minutes')
             ->orderByDesc('date')
             ->limit($limit)
             ->get();
