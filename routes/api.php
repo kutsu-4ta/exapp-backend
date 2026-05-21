@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AnalysisController;
-use App\Http\Controllers\GeminiContextController;
 use App\Http\Controllers\GeminiSettingController;
 use App\Http\Controllers\BugfixSessionController;
 use App\Http\Controllers\DegBugfixController;
@@ -32,6 +31,7 @@ use App\Http\Controllers\SprintController;
 use App\Http\Controllers\StudyTicketController;
 use App\Http\Controllers\TicketNoteController;
 use App\Http\Controllers\SubjectDetailController;
+use App\Http\Controllers\SubjectSummaryController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 科目
     Route::get('subjects', [SubjectController::class, 'index']);
+    Route::get('subjects/summary', [SubjectSummaryController::class, 'index']);
     Route::get('subjects/alert-status', [SubjectAlertStatusController::class, 'index']);
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
@@ -113,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('problems/{id}/quizzes/{quizId}', [ProblemQuizController::class, 'destroy']);
 
     // ダッシュボード
-    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard', [DashboardController::class, 'index']);
 
     // 演習セッション
     Route::put('practice/sessions/draft', [PracticeController::class, 'storeDraft']);
@@ -126,9 +127,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // AI画像解析
     Route::post('ai/analysis', [AnalysisController::class, 'analyzeProblem']);
-
-    // Geminiコピー用コンテキスト
-    Route::get('gemini/context', [GeminiContextController::class, 'show']);
 
     // Gemini設定（使用モデル）
     Route::get('gemini/settings', [GeminiSettingController::class, 'show']);

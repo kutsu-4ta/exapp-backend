@@ -1,6 +1,6 @@
 <?php
 
-namespace App\UseCases\GeminiContext;
+namespace App\UseCases\Subject;
 
 use App\Enums\ExamSessionStatus;
 use App\Enums\FailureType;
@@ -10,29 +10,20 @@ use App\Models\Subject;
 use App\Models\SubjectMonthlyGoal;
 use App\Models\SubjectSetting;
 use App\Models\StudySession;
-use App\Models\UserProfile;
-use App\UseCases\Dashboard\GetDashboardStatsUseCase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class GetGeminiContextUseCase
+class GetSubjectsSummaryUseCase
 {
-    public function __construct(
-        private readonly GetDashboardStatsUseCase $dashboardUseCase,
-    ) {}
-
     public function __invoke(int $userId, ?int $year = null, ?int $month = null): array
     {
         $now   = Carbon::now();
         $year  = $year  ?? $now->year;
         $month = $month ?? $now->month;
 
-        $dashboard = ($this->dashboardUseCase)($userId, $year, $month);
-        $subjects  = Subject::orderBy('display_order')->get();
+        $subjects   = Subject::orderBy('display_order')->get();
         $subjectIds = $subjects->pluck('id');
-
-        // ── SubjectSettings / MonthlyGoals / StudyMinutes / WeakProblems ────────
 
         $settings = SubjectSetting::where('user_id', $userId)
             ->whereIn('subject_id', $subjectIds)
@@ -62,46 +53,7 @@ class GetGeminiContextUseCase
             ->get(['subject_id', 'failure_types'])
             ->groupBy('subject_id');
 
-        // ── UserProfile ──────────────────────────────────────────────────────────
-
-        $userProfile = UserProfile::where('user_id', $userId)
-            ->first(['occupation', 'goal', 'weak_areas', 'strong_areas']);
-
-        // ── 直近7日間 DailyLogs ──────────────────────────────────────────────────
-
-        $today        = Carbon::today();
-        $sevenDaysAgo = $today->copy()->subDays(6);
-
-        $dailyLogRows = DB::table('daily_logs as dl')
-            ->leftJoin('study_sessions as ss', 'ss.daily_log_id', '=', 'dl.id')
-            ->where('dl.user_id', $userId)
-            ->whereBetween('dl.date', [$sevenDaysAgo->toDateString(), $today->toDateString()])
-            ->groupBy('dl.id', 'dl.date', 'dl.reflection')
-            ->orderBy('dl.date')
-            ->get([
-                'dl.date',
-                'dl.reflection',
-                DB::raw('COALESCE(SUM(ss.minutes), 0) as study_minutes'),
-            ])
-            ->keyBy('date');
-
-        // 7日分ゼロ補填（記録がない日も含める）
-        $recentDailyLogs = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = $today->copy()->subDays($i)->toDateString();
-            $row  = $dailyLogRows->get($date);
-            $recentDailyLogs[] = [
-                'date'         => $date,
-                'studyMinutes' => $row ? (int) $row->study_minutes : 0,
-                'reflection'   => $row?->reflection,
-            ];
-        }
-
-        // ── 科目別 直近完了過去問スコア ──────────────────────────────────────────
-
         $latestExamBySubject = $this->fetchLatestExamScores($userId, $subjectIds);
-
-        // ── 科目データ組み立て ───────────────────────────────────────────────────
 
         $subjectData = $subjects->map(function (Subject $subject) use (
             $settings,
@@ -110,10 +62,9 @@ class GetGeminiContextUseCase
             $weakProblemsBySubject,
             $latestExamBySubject,
         ) {
-            $id = $subject->id;
-
-            $problems     = $weakProblemsBySubject->get($id, collect());
-            $examRow      = $latestExamBySubject->get($id);
+            $id       = $subject->id;
+            $problems = $weakProblemsBySubject->get($id, collect());
+            $examRow  = $latestExamBySubject->get($id);
 
             return [
                 'subject'         => $subject->name,
@@ -128,48 +79,77 @@ class GetGeminiContextUseCase
                     'completedAt' => $examRow->completed_at
                         ? Carbon::parse($examRow->completed_at)->toDateString()
                         : null,
+                    'rankStats'   => $examRow->rank_stats,
                 ] : null,
             ];
         })->values()->toArray();
 
         return [
-            'year'            => $year,
-            'month'           => $month,
-            'profile'         => [
-                'occupation' => $userProfile?->occupation,
-                'goal'       => $userProfile?->goal,
-                'weakAreas'  => $userProfile?->weak_areas,
-                'strongAreas' => $userProfile?->strong_areas,
-            ],
-            'dashboard'       => $dashboard,
-            'recentDailyLogs' => $recentDailyLogs,
-            'subjects'        => $subjectData,
+            'year'     => $year,
+            'month'    => $month,
+            'subjects' => $subjectData,
         ];
     }
 
-    /**
-     * 科目別の直近完了済み過去問スコアを1クエリで取得。
-     * exam_questions.point の合計（is_correct=true のみ）を score として返す。
-     */
     private function fetchLatestExamScores(int $userId, Collection $subjectIds): Collection
     {
-        $rows = DB::table('exam_sessions as es')
-            ->join('exam_questions as eq', 'eq.exam_session_id', '=', 'es.id')
+        // 科目ごとの最新完了セッションを取得（completed_at DESC → exam_year DESC の先頭 = 最新）
+        $latestSessions = DB::table('exam_sessions as es')
             ->where('es.user_id', $userId)
             ->where('es.status', ExamSessionStatus::Completed->value)
             ->whereIn('es.subject_id', $subjectIds)
-            ->groupBy('es.id', 'es.subject_id', 'es.exam_year', 'es.completed_at')
             ->orderByDesc('es.completed_at')
             ->orderByDesc('es.exam_year')
-            ->get([
-                'es.subject_id',
-                'es.exam_year',
-                'es.completed_at',
-                DB::raw("SUM(CASE WHEN eq.is_correct = true THEN eq.point ELSE 0 END) as score"),
-            ]);
+            ->get(['es.id', 'es.subject_id', 'es.exam_year', 'es.completed_at'])
+            ->unique('subject_id')
+            ->keyBy('subject_id');
 
-        // 科目ごとに最新1件のみ（クエリが completed_at DESC 順なので unique で先頭 = 最新）
-        return $rows->unique('subject_id')->keyBy('subject_id');
+        if ($latestSessions->isEmpty()) {
+            return collect();
+        }
+
+        $sessionIds = $latestSessions->pluck('id');
+
+        $scores = DB::table('exam_questions as eq')
+            ->whereIn('eq.exam_session_id', $sessionIds)
+            ->groupBy('eq.exam_session_id')
+            ->get([
+                'eq.exam_session_id',
+                DB::raw("SUM(CASE WHEN eq.is_correct = true THEN eq.point ELSE 0 END) as score"),
+            ])
+            ->keyBy('exam_session_id');
+
+        $rankStatsRows = DB::table('exam_questions as eq')
+            ->whereIn('eq.exam_session_id', $sessionIds)
+            ->whereNotNull('eq.rank')
+            ->groupBy('eq.exam_session_id', 'eq.rank')
+            ->orderBy('eq.rank')
+            ->get([
+                'eq.exam_session_id',
+                'eq.rank',
+                DB::raw('COUNT(*) as total'),
+                DB::raw('SUM(CASE WHEN eq.is_correct = true THEN 1 ELSE 0 END) as correct'),
+            ])
+            ->groupBy('exam_session_id');
+
+        return $latestSessions->map(function ($session) use ($scores, $rankStatsRows) {
+            $sid      = $session->id;
+            $score    = $scores->get($sid);
+            $rankRows = $rankStatsRows->get($sid, collect());
+
+            $rankStats = $rankRows->map(fn ($r) => [
+                'rank'        => $r->rank,
+                'correctRate' => $r->total > 0 ? round($r->correct / $r->total, 4) : 0.0,
+                'count'       => (int) $r->total,
+            ])->values()->toArray();
+
+            return (object) [
+                'exam_year'    => $session->exam_year,
+                'score'        => (int) ($score?->score ?? 0),
+                'completed_at' => $session->completed_at,
+                'rank_stats'   => $rankStats,
+            ];
+        });
     }
 
     private function buildFailureStats(Collection $problems): array

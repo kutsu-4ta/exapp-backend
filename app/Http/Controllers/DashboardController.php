@@ -2,29 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use App\UseCases\Dashboard\GetDashboardStatsUseCase;
+use App\Http\Resources\DailyLogResource;
+use App\UseCases\Dashboard\GetDashboardUseCase;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        private readonly GetDashboardStatsUseCase $statsUseCase,
+        private readonly GetDashboardUseCase $dashboardUseCase,
     ) {}
 
-    public function stats(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        // Requestインスタンス、または明示的なsanctumガードからユーザーを取得
         $user = $request->user() ?? auth('sanctum')->user();
 
         if (!$user) {
             throw new AuthenticationException('ユーザー認証に失敗しました。');
         }
 
-        $stats = ($this->statsUseCase)($user->id);
+        ['stats' => $stats, 'todayLog' => $todayLog, 'prevDayLog' => $prevDayLog, 'alertItems' => $alertItems]
+            = ($this->dashboardUseCase)($user->id);
 
-        return response()->json($stats);
+        return response()->json([
+            'stats'      => $stats,
+            'todayLog'   => $todayLog ? new DailyLogResource($todayLog) : null,
+            'prevDayLog' => $prevDayLog ? new DailyLogResource($prevDayLog) : null,
+            'alertItems' => $alertItems,
+        ]);
     }
 }

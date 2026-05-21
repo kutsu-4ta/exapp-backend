@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\UseCases\GeminiContext\GetGeminiContextUseCase;
+use App\UseCases\Subject\GetSubjectsSummaryUseCase;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class GeminiContextController extends Controller
+class SubjectSummaryController extends Controller
 {
     public function __construct(
-        private readonly GetGeminiContextUseCase $useCase,
+        private readonly GetSubjectsSummaryUseCase $useCase,
     ) {}
 
-    public function show(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user() ?? auth('sanctum')->user();
 
@@ -24,8 +24,6 @@ class GeminiContextController extends Controller
         $year  = $request->integer('year')  ?: null;
         $month = $request->integer('month') ?: null;
 
-        $context = ($this->useCase)($user->id, $year, $month);
-
-        return response()->json($context);
+        return response()->json(($this->useCase)($user->id, $year, $month));
     }
 }
