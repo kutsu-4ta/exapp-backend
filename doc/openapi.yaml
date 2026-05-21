@@ -879,10 +879,10 @@ components:
 
     TicketSource:
       type: string
-      enum: [ wrong_answer, mock_exam, review, manual ]
+      enum: [ wrong_answer, load_map, review, manual ]
       description: |
         - `wrong_answer`: 過去問ミスから発生
-        - `mock_exam`: 模試から発生
+        - `load_map`: ロードマップ
         - `review`: 定期見直しから発生
         - `manual`: 手動作成
 

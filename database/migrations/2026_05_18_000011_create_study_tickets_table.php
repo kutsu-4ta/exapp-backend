@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('study_tickets', function (Blueprint $table) {
@@ -18,7 +17,7 @@ return new class extends Migration
             $table->string('status')->default('todo');     // todo | doing | done
             $table->string('priority')->default('medium'); // high | medium | low
             $table->string('ticket_type');                 // knowledge | practice | understanding | memorization
-            $table->string('source')->default('manual');   // wrong_answer | mock_exam | review | manual
+            $table->string('source')->default('manual');   // wrong_answer | load_map | review | manual
             $table->unsignedSmallInteger('estimate_minutes')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
