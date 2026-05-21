@@ -22,7 +22,7 @@ class GetSubjectsSummaryUseCase
         $year  = $year  ?? $now->year;
         $month = $month ?? $now->month;
 
-        $subjects   = Subject::orderBy('display_order')->get();
+        $subjects   = Subject::where('user_id', $userId)->orderBy('display_order')->get();
         $subjectIds = $subjects->pluck('id');
 
         $settings = SubjectSetting::where('user_id', $userId)
@@ -122,6 +122,7 @@ class GetSubjectsSummaryUseCase
         $rankStatsRows = DB::table('exam_questions as eq')
             ->whereIn('eq.exam_session_id', $sessionIds)
             ->whereNotNull('eq.rank')
+            ->where('eq.has_children', false)
             ->groupBy('eq.exam_session_id', 'eq.rank')
             ->orderBy('eq.rank')
             ->get([

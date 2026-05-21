@@ -39,12 +39,12 @@ class GetExamSubjectStatsUseCase
 
         $recentMistakes = $sessions
             ->sortByDesc('completed_at')
-            ->flatMap(fn ($s) => $s->questions->filter(fn ($q) => filled($q->note))->map(fn ($q) => [
+            ->flatMap(fn ($s) => $s->questions->filter(fn ($q) => filled($q->note) && !$q->has_children)->map(fn ($q) => [
                 'questionId' => $q->id,
                 'sessionId' => $s->id,
                 'examYear' => $s->exam_year,
                 'displayId' => $q->display_id,
-                'rank' => $q->rank->value,
+                'rank' => $q->rank?->value,
                 'note' => $q->note,
                 'isDoubtful' => $q->is_doubtful,
                 'completedAt' => $s->completed_at?->toIso8601String(),

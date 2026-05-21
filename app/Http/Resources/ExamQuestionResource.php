@@ -16,7 +16,7 @@ class ExamQuestionResource extends JsonResource
             'displayId' => $this->display_id,
             'isSub' => $this->is_sub,
             'hasChildren' => $this->has_children,
-            'rank' => $this->rank->value,
+            'rank' => $this->rank?->value,
             'myAnswer' => $this->my_answer,
             'isCorrect' => $this->is_correct,
             'isDoubtful' => $this->is_doubtful,
