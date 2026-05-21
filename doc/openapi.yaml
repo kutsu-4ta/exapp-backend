@@ -338,7 +338,7 @@ components:
 
     DailyLogSummary:
       type: object
-      required: [ date, isCompleted, totalMinutes, sessionCount, slotMinutes ]
+      required: [ date, isCompleted, totalMinutes, sessionCount, slotMinutes, subjectMinutes ]
       properties:
         date: { type: string, format: date }
         isCompleted: { type: boolean }
@@ -352,6 +352,11 @@ components:
             morning: { type: integer }
             lunch: { type: integer }
             night: { type: integer }
+        subjectMinutes:
+          type: object
+          description: 科目別の学習時間（分）
+          additionalProperties:
+            type: integer
 
     Proficiency:
       type: string

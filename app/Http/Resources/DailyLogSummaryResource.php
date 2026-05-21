@@ -14,11 +14,15 @@ class DailyLogSummaryResource extends JsonResource
             'isCompleted'  => $this->is_completed,
             'totalMinutes' => (int) ($this->study_sessions_sum_minutes ?? 0),
             'sessionCount' => (int) ($this->study_sessions_count ?? 0),
-            'slotMinutes'  => [
+            'slotMinutes'   => [
                 'morning' => (int) ($this->morning_minutes ?? 0),
                 'lunch'   => (int) ($this->lunch_minutes   ?? 0),
                 'night'   => (int) ($this->night_minutes   ?? 0),
             ],
+            'subjectMinutes' => $this->studySessions
+                ->groupBy(fn ($s) => $s->subject->name)
+                ->map(fn ($sessions) => $sessions->sum('minutes'))
+                ->toArray(),
         ];
     }
 }
