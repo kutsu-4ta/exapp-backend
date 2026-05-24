@@ -106,7 +106,7 @@ class GetDashboardStatsUseCase
     private function thisWeekTotalMinutes(int $userId): int
     {
         // 今週の月曜日の日付を取得 (Carbonはデフォルトで月曜が週の開始)
-        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
+        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
         // 今日の日付を取得
         $today = Carbon::now()->toDateString();
 

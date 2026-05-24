@@ -102,7 +102,7 @@ class GetAiAdviceUseCase
         $month        = $now->month;
         $today        = $now->toDateString();
         $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
-        $weekStart    = $now->copy()->startOfWeek()->toDateString();
+        $weekStart    = $now->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
 
         $subjectMinutes        = $this->subjectMinutes($userId, $year, $month);
         $allTimeSubjectMinutes = $this->allTimeSubjectMinutes($userId);
