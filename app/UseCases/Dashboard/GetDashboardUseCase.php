@@ -18,7 +18,7 @@ class GetDashboardUseCase
     public function __invoke(int $userId): array
     {
         $now      = Carbon::now();
-        $todayStr = $now->toDateString();
+        $todayStr = ($now->hour < 4 ? $now->copy()->subDay() : $now)->toDateString();
 
         $stats      = ($this->statsUseCase)($userId);
         $alertItems = ($this->alertUseCase)($userId);
