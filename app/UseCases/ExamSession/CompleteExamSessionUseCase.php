@@ -44,9 +44,9 @@ class CompleteExamSessionUseCase
             ? Carbon::parse($q['answeredFinishedAt'])->utc()
             : null;
 
-        // サーバー側で確定。タイムスタンプがなければフロント値をそのままフォールバック
-        $answeredTimeMs = ExamQuestion::computeAnsweredTimeMs($startedAt, $finishedAt)
-            ?? ($q['answeredTimeMs'] ?? null);
+        // フロント側でフォーカス時間を累計した値を優先。なければタイムスタンプ差分にフォールバック
+        $answeredTimeMs = ($q['answeredTimeMs'] ?? null)
+            ?? ExamQuestion::computeAnsweredTimeMs($startedAt, $finishedAt);
 
         return [
             'sort_order'          => $q['sortOrder'],
