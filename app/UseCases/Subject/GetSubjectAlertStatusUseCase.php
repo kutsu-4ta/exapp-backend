@@ -39,9 +39,10 @@ class GetSubjectAlertStatusUseCase
                 : self::DEFAULT_MINUTES_THRESHOLD_DAYS,
         ]);
 
+        $now      = Carbon::now();
+        $today    = ($now->hour < 4 ? $now->copy()->subDay() : $now->copy())->toDateString();
         $maxDays  = max((int) $thresholdDaysMap->max(), 1);
-        $fromDate = Carbon::today()->subDays($maxDays)->toDateString();
-        $today    = Carbon::today()->toDateString();
+        $fromDate = Carbon::parse($today)->subDays($maxDays)->toDateString();
 
         $subjectIdArray = $subjectIds->toArray();
 
@@ -87,7 +88,7 @@ class GetSubjectAlertStatusUseCase
             $lastDate    = $lastDateRow ? (string) $lastDateRow->last_date : null;
 
             // 科目固有の窓でフィルタして集計
-            $windowFrom    = Carbon::today()->subDays($thresholdDaysMap[$subject->id])->toDateString();
+            $windowFrom    = Carbon::parse($today)->subDays($thresholdDaysMap[$subject->id])->toDateString();
             $recentMinutes = (int) $minuteRows->get($subject->id, collect())
                 ->filter(fn ($row) => (string) $row->date >= $windowFrom)
                 ->sum('minutes');

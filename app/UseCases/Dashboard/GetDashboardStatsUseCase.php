@@ -10,24 +10,26 @@ class GetDashboardStatsUseCase
 {
     public function __invoke(int $userId, ?int $year = null, ?int $month = null): array
     {
-        $now = Carbon::now();
-        $year  = $year  ?? $now->year;
-        $month = $month ?? $now->month;
-        $today = $now->toDateString();
-        $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
-        $thirtyDaysAgo = $now->copy()->subDays(29)->toDateString();
+        $now          = Carbon::now();
+        $effectiveNow = $now->hour < 4 ? $now->copy()->subDay() : $now->copy();
+
+        $year  = $year  ?? $effectiveNow->year;
+        $month = $month ?? $effectiveNow->month;
+        $today         = $effectiveNow->toDateString();
+        $sevenDaysAgo  = $effectiveNow->copy()->subDays(6)->toDateString();
+        $thirtyDaysAgo = $effectiveNow->copy()->subDays(29)->toDateString();
 
         $thisMonthMinutes = $this->thisMonthMinutes($userId, $year, $month);
 
         return [
-            'currentStreak' => $this->currentStreak($userId, $now),
+            'currentStreak' => $this->currentStreak($userId, $effectiveNow),
             'allTotalMinutes' => $this->allTotalMinutes($userId),
             'allTotalDays' => $this->allTotalDays($userId),
             'thisMonthMinutes' => $thisMonthMinutes,
             'thisMonthDays' => $this->thisMonthDays($userId, $year, $month),
-            'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId), // 月曜始まりの一週間
+            'thisWeekTotalMinutes' => $this->thisWeekTotalMinutes($userId, $effectiveNow),
             'last7DaysMinutes' => $this->last7DaysMinutes($userId, $sevenDaysAgo, $today),
-            'weeklyAvgMinutes' => $this->weeklyAvgMinutes($thisMonthMinutes, $now),
+            'weeklyAvgMinutes' => $this->weeklyAvgMinutes($thisMonthMinutes, $effectiveNow),
             'subjectMinutes' => $this->subjectMinutes($userId, $year, $month),
             'allSubjectMinutes' => $this->allSubjectMinutes($userId),
             'lastTouchedBySubject' => $this->lastTouchedBySubject($userId),
@@ -103,12 +105,10 @@ class GetDashboardStatsUseCase
         return $streak;
     }
 
-    private function thisWeekTotalMinutes(int $userId): int
+    private function thisWeekTotalMinutes(int $userId, Carbon $effectiveNow): int
     {
-        // 今週の月曜日の日付を取得 (Carbonはデフォルトで月曜が週の開始)
-        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
-        // 今日の日付を取得
-        $today = Carbon::now()->toDateString();
+        $startOfWeek = $effectiveNow->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
+        $today       = $effectiveNow->toDateString();
 
         return (int) StudySession::join('daily_logs', 'daily_logs.id', '=', 'study_sessions.daily_log_id')
             ->where('daily_logs.user_id', $userId)

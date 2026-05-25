@@ -98,11 +98,13 @@ class GetAiAdviceUseCase
 
     private function buildContext(int $userId, Carbon $now, UserProfile $profile, array $materials): AdviceContext
     {
-        $year         = $now->year;
-        $month        = $now->month;
-        $today        = $now->toDateString();
-        $sevenDaysAgo = $now->copy()->subDays(6)->toDateString();
-        $weekStart    = $now->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
+        $effectiveNow = $now->hour < 4 ? $now->copy()->subDay() : $now->copy();
+
+        $year         = $effectiveNow->year;
+        $month        = $effectiveNow->month;
+        $today        = $effectiveNow->toDateString();
+        $sevenDaysAgo = $effectiveNow->copy()->subDays(6)->toDateString();
+        $weekStart    = $effectiveNow->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
 
         $subjectMinutes        = $this->subjectMinutes($userId, $year, $month);
         $allTimeSubjectMinutes = $this->allTimeSubjectMinutes($userId);
@@ -111,9 +113,9 @@ class GetAiAdviceUseCase
         $studyDays             = $this->studyDays($userId, $year, $month);
         $totalMonthMin         = array_sum($subjectMinutes);
         $weakSubjects          = $this->weakSubjects($userId);
-        $untouchedSubjects     = $this->untouchedSubjects($userId, $now);
+        $untouchedSubjects     = $this->untouchedSubjects($userId, $effectiveNow);
         $failureTypesBySubject = $this->failureTypesBySubject($userId);
-        $currentStreak         = $this->currentStreak($userId, $now);
+        $currentStreak         = $this->currentStreak($userId, $effectiveNow);
         $lastSubject           = $this->lastStudiedSubject($userId);
 
         return new AdviceContext(
