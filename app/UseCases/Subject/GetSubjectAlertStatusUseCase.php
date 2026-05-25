@@ -74,7 +74,7 @@ class GetSubjectAlertStatusUseCase
             ->get()
             ->groupBy('subject_id');
 
-        return $subjects->map(function ($subject) use ($settingsMap, $thresholdDaysMap, $lastDates, $minuteRows) {
+        return $subjects->map(function ($subject) use ($settingsMap, $thresholdDaysMap, $lastDates, $minuteRows, $today) {
             $setting = $settingsMap->get($subject->id) ?? new SubjectAlertSetting([
                 'touch_alert_enabled'    => self::DEFAULT_TOUCH_ALERT_ENABLED,
                 'threshold_days'         => self::DEFAULT_THRESHOLD_DAYS,
