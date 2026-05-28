@@ -698,11 +698,10 @@ components:
         quiz:
           type: object
           nullable: true
+          description: 'フラッシュカードの表裏。quiz が null の問題はスキップされる'
           properties:
-            question: { type: string }
-            options: { type: array, items: { type: string } }
-            correct_index: { type: integer, minimum: 0, maximum: 3 }
-            explanation: { type: string }
+            question: { type: string, description: 'カード表面。AIが #Definition から生成したキーワード質問' }
+            explanation: { type: string, description: 'カード裏面。#Definition 本文 + #Formula（存在する場合）' }
         last_touched_at: { type: string, format: date, nullable: true }
 
     TouchedOrder:
@@ -721,8 +720,8 @@ components:
             total_questions: { type: integer }
             strategy:
               type: string
-              enum: [ definition_focused, flash_bugfix, word_card, formula_check ]
-              description: 'definition_focused: Morning Bugfix / flash_bugfix: Flash Bugfix 一問一答 / word_card: 単語カード / formula_check: 公式チェック'
+              enum: [ bugfix_card ]
+              description: 'bugfix_card: #Definition ベースのフラッシュカードセッション'
         questions:
           type: array
           items: { $ref: '#/components/schemas/MorningQuizItem' }
@@ -2780,12 +2779,13 @@ paths:
 
   /deg-bugfix:
     get:
-      summary: DegBugfix セッションを取得
+      summary: DegBugfix カードセッションを取得
       tags: [ AI ]
       description: |
-        ユーザーが「良問」登録した `ProblemQuiz` を元にクイズセッションを組み立てて返す。
-        科目を指定した場合はその科目の良問のみを対象にする。省略時は全科目が対象。
-        登録済み良問がない、または指定条件に合致する良問がない場合は 422 を返す。
+        ユーザーが「良問（is_good_question=true）」に設定し、かつ note に `#Definition` を持つ
+        Problem を対象にフラッシュカードセッションを生成して返す。
+        科目を指定した場合はその科目のみを対象にする。省略時は全科目が対象。
+        対象問題がない場合は空の questions 配列を返す（200）。
       parameters:
         - name: subject
           in: query
@@ -2797,7 +2797,7 @@ paths:
           in: query
           required: false
           schema: { type: integer, default: 5, minimum: 1, maximum: 20 }
-          description: '取得問題数。良問の総数が limit 未満の場合は全件返す'
+          description: '取得問題数'
           example: 5
       responses:
         '200':
@@ -2807,45 +2807,37 @@ paths:
               schema: { $ref: '#/components/schemas/MorningBugfixSession' }
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: 条件に合致する良問クイズが存在しない
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [ message ]
-                properties:
-                  message: { type: string, example: '良問クイズが登録されていません' }
 
   /morning-bugfix:
     get:
-      summary: 定義復習クイズセッションを取得（Morning Bugfix / Flash Bugfix）
+      summary: BugFix カードセッションを取得（Morning Bugfix / Flash Bugfix）
       tags: [ AI ]
       description: |
-        苦手問題から定義理解クイズを生成して返す汎用エンドポイント。
-        新パラメータ（`failureType`, `subCategoryIds`, `touchedOrder`, `proficiency`, `limit`）を
-        **1つも指定しない**場合は Morning Bugfix モードとして動作し、既存の挙動を維持する。
+        note に `#Definition` を持つ問題を対象に、フラッシュカードセッションを生成して返す汎用エンドポイント。
+        AIが `#Definition` 内容からカード表面（キーワード質問）を生成し、
+        裏面には `#Definition` 本文 + `#Formula`（存在する場合）を返す。
+
+        フィルターパラメータ（`failureTypes`, `subCategoryIds`, `touchedOrder`, `proficiency`, `limit`）を
+        **1つも指定しない**場合は Morning Bugfix モードとして動作する。
         いずれか1つでも指定した場合は Flash Bugfix モード（柔軟フィルタ）として動作する。
 
         ### Morning Bugfix モード（パラメータ未指定）
-        デフォルト: `failureType=['定義']`, `limit=5`
+        デフォルト limit=5。
 
-        **3段階フォールバック:**
-        1. `last_touched_at == 昨日` かつ `定義`（RANDOM）
-        2. 直近7日以内の定義（昨日を除く）で補填（RANDOM）
-        3. 全期間の定義を習熟度低い順（×→△→○）で補填
+        **3段階フォールバック（#Definition 保持問題の中で）:**
+        1. `last_touched_at == 昨日`（RANDOM）
+        2. 直近7日以内（昨日を除く）で補填（RANDOM）
+        3. 全期間を習熟度低い順（×→△→○）で補填
 
         `date` パラメータを指定するとその日を「今日」とみなす（テスト用）。
 
         ### Flash Bugfix モード（任意パラメータ指定）
         指定した条件で問題を抽出し、不足時は段階的に条件を緩めて補填する。
-        複数選択されたパラメータ（`failureType`, `subCategoryIds`, `proficiency`）は、
-        それぞれの配列内での **OR条件** としてフィルタリングされる。
 
         **フォールバック順:**
-        1. `failureType` + `subCategoryIds`（フル条件）
-        2. `failureType` のみ（`subCategoryIds` を緩める）
-        3. `subCategoryIds` のみ（`failureType` を緩める）
+        1. `failureTypes` + `subCategoryIds`（フル条件）
+        2. `failureTypes` のみ
+        3. `subCategoryIds` のみ
         4. 全問題（習熟度低い順）
       parameters:
         - name: date
@@ -2912,23 +2904,21 @@ paths:
                   summary: Morning Bugfix（パラメータ未指定）
                   value:
                     session_id: 'morning_bugfix_20260512'
-                    meta: { total_questions: 3, strategy: 'definition_focused' }
+                    meta: { total_questions: 3, strategy: 'bugfix_card' }
                     questions:
                       - id: 42
                         subject: '企業経営理論'
                         sub_category: '経営戦略論'
-                        problem_context: { original_ref: '2023年 第12問', user_memo: 'PPM の定義' }
+                        problem_context: { original_ref: '2023年 第12問', user_memo: null, material_name: '基礎テキスト' }
                         quiz:
-                          question: '次のうちPPMにおける「花形」の定義として正しいものはどれか？'
-                          options: [ '高シェア・高成長', '低シェア・高成長', '高シェア・低成長', '低シェア・低成長' ]
-                          correct_index: 0
-                          explanation: '花形は市場成長率・市場シェアともに高い事業...'
+                          question: 'PPM（プロダクト・ポートフォリオ・マネジメント）とは？'
+                          explanation: "PPMとは、複数の事業を市場成長率と市場シェアの2軸で分類し、経営資源を最適配分するためのフレームワーク。\n\n[公式]\n花形: 高成長・高シェア / 金のなる木: 低成長・高シェア / 問題児: 高成長・低シェア / 負け犬: 低成長・低シェア"
                         last_touched_at: '2026-05-11'
                 flash_bugfix:
                   summary: Flash Bugfix（subjectPage から）
                   value:
                     session_id: 'flash_bugfix_20260512'
-                    meta: { total_questions: 5, strategy: 'flash_bugfix' }
+                    meta: { total_questions: 5, strategy: 'bugfix_card' }
                     questions: [ ]
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -2938,117 +2928,6 @@ paths:
           $ref: '#/components/responses/GeminiQuotaExceeded'
         '503':
           $ref: '#/components/responses/GeminiUnavailable'
-
-  # ── Flash Card ───────────────────────────────────────────────────────────────
-
-  /flash-card:
-    get:
-      summary: 単語カードセッションを取得（Flash Bugfix 単語カードモード）
-      tags: [ AI ]
-      description: |
-        苦手問題から単語カード形式のセッションを生成して返す。
-        レスポンス構造は `/morning-bugfix` と同じ `MorningBugfixSession` を使用する。
-        フロントエンドでは `quiz.question` を表面、`quiz.explanation` を裏面として表示する。
-
-        ### 公式チェックモード（`formulaOnly=true`）
-        財務会計・経済学・運営管理などで重宝する公式・定義のみに絞った問題を返す。
-        バックエンドは `is_formula=true` フラグを持つ問題のみを対象にフィルタリングする。
-
-        ### フォールバック順（Flash Bugfix と同様）
-        1. `failureType` + `subCategoryIds`（フル条件）
-        2. `failureType` のみ
-        3. `subCategoryIds` のみ
-        4. 全問題（習熟度低い順）
-      parameters:
-        - name: subject
-          in: query
-          required: true
-          schema: { type: string }
-          description: 科目名
-          example: '財務・会計'
-        - name: failureType
-          in: query
-          required: false
-          style: form
-          explode: true
-          schema:
-            type: array
-            items: { $ref: '#/components/schemas/FailureType' }
-          description: 'ミス種別フィルタ（複数選択可）。未指定なら全ミス種別対象'
-          example: [ '定義', '解法' ]
-        - name: subCategoryIds
-          in: query
-          required: false
-          style: form
-          explode: true
-          schema:
-            type: array
-            items: { type: integer }
-          description: '小分類IDフィルタ（複数選択可）。未指定なら全小分類対象'
-          example: [ 12, 15 ]
-        - name: touchedOrder
-          in: query
-          required: false
-          schema: { $ref: '#/components/schemas/TouchedOrder' }
-          description: '最後に触れた日からの近さ。未指定なら RANDOM'
-          example: 'old'
-        - name: limit
-          in: query
-          required: false
-          schema: { type: integer, default: 5, minimum: 1, maximum: 10 }
-          description: '取得問題数（max: 10）'
-          example: 5
-        - name: proficiency
-          in: query
-          required: false
-          style: form
-          explode: true
-          schema:
-            type: array
-            items: { $ref: '#/components/schemas/Proficiency' }
-          description: '習熟度フィルタ（複数選択可）。未指定なら △/× のみ'
-          example: [ '△', '×' ]
-        - name: formulaOnly
-          in: query
-          required: false
-          schema: { type: boolean, default: false }
-          description: |
-            `true` にすると公式・定義フラグ（`is_formula=true`）が付いた問題のみを対象にする。
-            財務会計・経済学・運営管理の公式チェックモードで使用する。
-          example: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/MorningBugfixSession' }
-              examples:
-                word_card:
-                  summary: 単語カードモード（formulaOnly=false）
-                  value:
-                    session_id: 'flash_card_20260516'
-                    meta: { total_questions: 5, strategy: 'word_card' }
-                    questions:
-                      - id: 101
-                        subject: '財務・会計'
-                        sub_category: 'CVP分析'
-                        problem_context: { original_ref: 'R04 第8問', user_memo: '' }
-                        quiz:
-                          question: '損益分岐点売上高の計算式を答えよ。'
-                          options: [ ]
-                          correct_index: 0
-                          explanation: '固定費 ÷ 限界利益率。限界利益率 = (売上高 - 変動費) / 売上高'
-                        last_touched_at: '2026-05-10'
-                formula_check:
-                  summary: 公式チェックモード（formulaOnly=true）
-                  value:
-                    session_id: 'flash_card_formula_20260516'
-                    meta: { total_questions: 5, strategy: 'formula_check' }
-                    questions: [ ]
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
 
   # ── AI Advice ────────────────────────────────────────────────────────────────
 

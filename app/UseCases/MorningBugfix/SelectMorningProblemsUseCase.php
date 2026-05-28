@@ -82,8 +82,9 @@ class SelectMorningProblemsUseCase
     {
         $query = Problem::where('problems.user_id', $userId)
             ->with(['subject', 'subCategory', 'material'])
-            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId))
-            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
+            ->whereNotNull('note')
+            ->where('note', 'like', '%#Definition%')
+            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId));
 
         if ($filter->failureTypes !== []) {
             $query->whereJsonContains('failure_types', $filter->failureTypes);
@@ -146,8 +147,9 @@ class SelectMorningProblemsUseCase
 
         $tier4 = Problem::where('user_id', $userId)
             ->with(['subject', 'subCategory', 'material'])
+            ->whereNotNull('note')
+            ->where('note', 'like', '%#Definition%')
             ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId))
-            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true))
             ->whereNotIn('id', $selected->pluck('id'))
             ->orderByRaw('CASE proficiency WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [$incorrect, $partial])
             ->orderByRaw('RANDOM()')
@@ -161,8 +163,9 @@ class SelectMorningProblemsUseCase
     {
         $query = Problem::where('user_id', $userId)
             ->with(['subject', 'subCategory', 'material'])
-            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId))
-            ->when($filter->formulaOnly, fn ($q) => $q->where('is_formula', true));
+            ->whereNotNull('note')
+            ->where('note', 'like', '%#Definition%')
+            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId));
 
         // ミス種別の複数選択対応 (JSON配列内のいずれか)
         if ($useFailureType && !empty($filter->failureTypes)) {

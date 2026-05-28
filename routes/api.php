@@ -3,10 +3,7 @@
 use App\Http\Controllers\AiAdviceController;
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\GeminiSettingController;
-use App\Http\Controllers\BugfixSessionController;
 use App\Http\Controllers\DegBugfixController;
-use App\Http\Controllers\DegWordCardController;
-use App\Http\Controllers\FlashCardSessionController;
 use App\Http\Controllers\MorningBugfixController;
 use App\Http\Controllers\SubjectAlertStatusController;
 use App\Http\Controllers\SubjectCountsController;
@@ -136,18 +133,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('gemini/settings', [GeminiSettingController::class, 'show']);
     Route::put('gemini/settings', [GeminiSettingController::class, 'update']);
 
-    // 朝の定義復習
+    // BugFix カードセッション
     Route::get('morning-bugfix', [MorningBugfixController::class, 'show']);
-
-    // 統合クイズセッション
-    Route::get('bugfix-session', [BugfixSessionController::class, 'show']);
-
-    // 良問クイズセッション（移行期間中は維持）
     Route::get('deg-bugfix', [DegBugfixController::class, 'show']);
-    Route::get('deg-word-card', [DegWordCardController::class, 'show']);
-
-    // 単語カード／公式チェックセッション
-    Route::get('flash-card', [FlashCardSessionController::class, 'show']);
 
     // ストップウォッチ
     Route::get('stopwatch', [StopwatchController::class, 'show']);
