@@ -35,18 +35,22 @@ class GenerateBugfixCardUseCase
         }
 
         // Gemini で表面（キーワード質問）を一括生成
-        $items = $parsed->map(fn ($tags, $id) => [
-            'problem_id' => $id,
-            'definition' => $tags['definition'],
-        ])->values()->toArray();
+        $items = $parsed->map(function ($tags, $id) use ($problems) {
+            return [
+                'problem_id'   => $id,
+                'sub_category' => $problems->find($id)?->subCategory?->name,
+                'definition'   => $tags['definition'],
+            ];
+        })->values()->toArray();
 
         $fronts = $this->generateFronts($items, $apiKey, $model);
 
         // カード組み立て
         $result = [];
         foreach ($parsed as $problemId => $tags) {
-            $front = $fronts[$problemId] ?? $this->fallbackFront($tags['definition']);
-            $back  = $tags['definition'];
+            $subCategory = $problems->find($problemId)?->subCategory?->name;
+            $front       = $fronts[$problemId] ?? $this->fallbackFront($tags['definition'], $subCategory);
+            $back        = $tags['definition'];
             if (!empty($tags['formula'])) {
                 $back .= "\n\n[公式]\n" . $tags['formula'];
             }
@@ -85,11 +89,13 @@ class GenerateBugfixCardUseCase
     {
         return <<<'TEXT'
 あなたは資格試験の学習カード生成AIです。
-定義テキストを受け取り、そのキーワードを問う質問文（カード表面）を生成します。
+各問題の小分類（sub_category）と定義テキスト（definition）を受け取り、
+そのキーワードを問う質問文（カード表面）を生成します。
 
 【ルール】
+- sub_category が指定されている場合はそのキーワードを優先して問う
+- sub_category が null の場合は definition の中心となる用語・概念を問う
 - 「〜とは何か？」「〜を定義せよ」「〜の意味を答えよ」などの形式で1文を作成する
-- 定義の中心となる用語・概念を問うこと
 - 15〜35文字程度で簡潔に日本語で出力する
 - 余分な説明は一切不要
 TEXT;
@@ -101,11 +107,12 @@ TEXT;
         $json  = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
         return <<<TEXT
-以下の {$count} 件の定義それぞれについて、キーワードを問う質問文を生成してください。
+以下の {$count} 件について、キーワードを問う質問文を生成してください。
+sub_category がある場合はそのキーワードを優先してください。
 
 {$json}
 
-各定義について problem_id と front（質問文）を返してください。
+各項目について problem_id と front（質問文）を返してください。
 TEXT;
     }
 
@@ -124,9 +131,9 @@ TEXT;
         ];
     }
 
-    private function fallbackFront(string $definition): string
+    private function fallbackFront(string $definition, ?string $subCategory = null): string
     {
-        $keyword = mb_substr($definition, 0, 20);
+        $keyword = $subCategory ?? mb_substr($definition, 0, 20);
         return rtrim($keyword, '。、') . 'とは？';
     }
 }
