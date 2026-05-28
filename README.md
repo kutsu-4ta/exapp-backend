@@ -1,68 +1,282 @@
-# 資格勉強アプリ 要件定義案
+# exapp (tsumiki) — バックエンド
 
-## 中小企業診断士特化
+資格試験・受験勉強を管理する Web アプリ **tsumiki** のバックエンドリポジトリ。
 
-1. 背景と目的
-* 背景: 学習開始2ヶ月が経過し、物理的なテキスト・ノート・iOSメモに分散した情報（学習ログ、苦手論点、ミス原因）の管理コストが増大している。
-* 課題: 机に向かっている貴重な時間に「情報の整理」や「分析」の作業が入り込み、演習効率を下げている。また、既存の汎用ツール（Notion等）では構造が煩雑になり、入力・管理のオーバーヘッドが大きい。
-* 目的: 物理的な「書く」プロセスを維持しつつ、情報をデジタルに集約。「机では演習に全振り、出先で弱点克服とプランニング」を完璧に使い分ける環境を作る。
+対応するフロントエンド: `exapp-frontend`
 
-2. 解決すべき現行の運用フロー
-   システム化にあたり、以下の具体的で物理的な運用をデータとして統合する。
-   ① 学習ログと進捗管理
-* 固定ブロック制の記録: 早朝・昼・通勤・深夜のブロックごとの「予定時間」と「実際時間」の対比。
-* 教材別ステータス: 「テキスト完」「問題集2周」「スピード問題集未着手」といった、科目ごとの教材進捗深度の可視化。
-  ② 独自のミス分析（最重要データ）
-  テキストやノートで行っている以下のタグ付け・整理を、デジタル上で活用可能にする。
-* 3種類の失敗原因タグ: 1. 定義: 知識不足（暗記で解決すべきもの）2. 解法: 手順・パターンの未習得（理解で解決すべきもの）3. ケアレス: ケアレスミス（精度向上の課題）
-* 問題評価と履歴: 「良問」フラグ、解いた日付、習熟度（○、×、△）の記録。
-* 苦手リスト: 苦手な論点リストと、それに紐づく問題集の演習番号のリンク。
+---
 
-3. UX・設計構想
-   UXコンセプト: 「Obsidianライクな自由度 × 診断士特有の構造化」
-* デイリー・ワークスペース:
-    * 1日の活動を1画面で書き込めるワークスペース。iOSメモやObsidianのように、テキストベースでラフに記述できるが、科目や時間はシステムが自動抽出・集計する。
-    * 1日の終わりに「完了」することで、その日のデータが統計に反映される（過去の編集も可能）。
-* カード型・弱点復習ビュー:
-    * 出先や隙間時間に、「財務のケアレス」や「経済の良問」だけを抽出して表示。
-    * ノートに手書きした図解や思考プロセスを写真で紐付け、即座に確認できる。
-      AI (Gemini) 連携機能
-* 学習ログの多角的分離・分析:
-    * 蓄積された「失敗原因タグ」を分析し、「今週は解法が多いため、演習よりプロセスの再確認を優先すべき」といったアドバイスを生成。
-    * 過去問の「A/Bランク取りこぼし」データから、目標点数（例：70点ライン）に到達するために埋めるべき最短経路を提示。
-* セキュアなAPI連携: * Gemini API（無料枠）を活用。APIキー漏洩防止のため、APIサーバーを介した構成でプロンプトを制御。
+## 目次
 
-4. 設計構成まとめ
-   項目	内容
-   入力	テキストベースのデイリーログ（手書きノートの写真添付を含む）
-   管理項目	科目別時間、正誤（○×△）、失敗原因（定義・解法・計算）、教材進捗
-   UX	常時開けるワークスペース ＋ 隙間時間用の抽出ビュー
-   AI活用	ログからの学習傾向分析、苦手論点の抽出、プランニング支援
-   目指す状態	机では1秒も管理作業をせず、スマホが「次やるべきこと」を知っている状態
+1. [アプリ概要](#アプリ概要)
+2. [技術スタック](#技術スタック)
+3. [セットアップ](#セットアップ)
+4. [アーキテクチャ](#アーキテクチャ)
+5. [API 一覧](#api-一覧)
+6. [主要ドメインの説明](#主要ドメインの説明)
+7. [不要コードの洗い出し](#不要コードの洗い出し)
 
+---
 
-# 開発
+## アプリ概要
 
-## CI
+### 主要機能
 
-GitHub Actions で以下を自動実行:
+| 機能 | 説明 |
+|------|------|
+| **Workspace** | 日次学習ログ（時間帯別セッション記録・振り返り・完了フラグ） |
+| **NoteList** | 問題・ミスのデータベース（習熟度・失敗属性タグ・`#Definition` などのハッシュタグ） |
+| **BugFix** | フラッシュカード形式の復習（Morning / Flash / Deg の 3 モード） |
+| **Exam** | 模試・過去問セッション管理と得点分析 |
+| **Practice** | 科目別フラッシュカード練習 |
+| **Sprint** | スタディチケットの Kanban 管理（目標設定・振り返り） |
+| **Dashboard** | 学習統計・AI アドバイス・ストップウォッチ |
+| **Subject** | 科目設定・活動グラフ・月次目標 |
 
-- **Frontend**: lint → typecheck → format check → build（`frontend/**` 変更時）
-- **Backend**: pint (lint) → phpstan (静的解析) → phpunit (テスト)（`backend/**` 変更時）
+### BugFix の仕組み
 
-### Frontend CI の注意点
+問題ノートの `#Definition` ハッシュタグを解析し、Gemini API でキーワードを生成してフラッシュカードを作る。
 
-`eslint-config-prettier` と `prettier` は `devDependencies` に含まれている必要がある（`eslint.config.mjs` と `format:check` スクリプトで使用）。
+```
+GET /morning-bugfix または /deg-bugfix
+  ↓
+#Definition を持つ問題を選出
+  ↓
+NoteParser で #Definition / #Formula を抽出
+  ↓
+Gemini API（一括）でキーワード質問を生成
+  ↓
+quiz: { question: <キーワード質問>, explanation: <定義 + 公式> }
+```
 
-### Backend CI の注意点
+Gemini 失敗時のフォールバック: 定義の先頭 20 文字 + "とは？"
 
-`phpunit.xml` に `APP_KEY` を `force="true"` で定義しているため、`.env` の `APP_KEY` が空の状態でもテストが動作する。
-テストスイートは `tests/Feature/HealthCheckTest.php`（API ヘルスチェック）と `tests/Unit/ExampleTest.php` のみ。
+---
 
+## 技術スタック
 
-## アプリが一次リリースする前にモノリポを解消する
-現在は開発段階で、構成が大きく変わることを踏まえて、コードベースの解析の運用上の都合で、バックエンド、フロントエンドのモノリポとしている。
+| レイヤー | 技術 |
+|---------|------|
+| Framework | Laravel 11 (PHP 8.3) |
+| DB | PostgreSQL 17 |
+| Auth | Firebase Authentication + Laravel Sanctum |
+| AI | Google Gemini API（ユーザーが API キーを登録） |
+| インフラ | Docker Compose（開発）/ Cloud Run（本番） |
+| テスト | PHPUnit |
 
-## プロジェクト状況
-以前の「exapp」という別アプリの技術スタックと同等のため、このソースを書き換えることで開発の基盤構築コストを下げる。
-本アプリは論理名・物理名ともに「exapp」である。
+---
+
+## セットアップ
+
+### 前提条件
+
+- Docker / Docker Compose
+- Firebase プロジェクト（Admin SDK サービスアカウント）
+
+### 手順
+
+```bash
+# 1. リポジトリをクローン
+git clone <repository-url>
+cd exapp-backend
+
+# 2. 環境変数ファイルを作成
+cp .env.example .env
+
+# 3. .env を編集
+#    必須:
+#      FIREBASE_PROJECT_ID   ... Firebase のプロジェクト ID
+#      FIREBASE_CREDENTIALS  ... サービスアカウント JSON の内容（文字列）
+#      APP_KEY               ... php artisan key:generate で生成
+
+# 4. コンテナを起動
+docker compose up -d
+
+# 5. マイグレーション実行
+docker compose exec backend php artisan migrate
+
+# 6. APP_KEY の生成（未設定の場合）
+docker compose exec backend php artisan key:generate
+```
+
+サーバーは `http://localhost:8000` で起動する。
+
+### 主要な環境変数
+
+| 変数 | 説明 |
+|------|------|
+| `FIREBASE_PROJECT_ID` | Firebase プロジェクト ID |
+| `FIREBASE_CREDENTIALS` | サービスアカウント JSON（文字列） |
+| `CORS_ALLOWED_ORIGINS` | フロントエンドの URL（例: `http://localhost:5173`） |
+| `GEMINI_API_KEY` | ダミー値で可（実際のキーはユーザーが DB に登録） |
+| `SANCTUM_TOKEN_EXPIRATION_DAYS` | トークン有効期限（日数） |
+
+### 本番デプロイ（Cloud Run）
+
+```bash
+make deploy
+# docker build → push → gcloud run deploy を一括実行
+```
+
+---
+
+## アーキテクチャ
+
+### ディレクトリ構成
+
+```
+app/
+├── Http/
+│   ├── Controllers/   # 32 コントローラ（薄い。UseCase に委譲）
+│   ├── Requests/      # 34 バリデーションクラス
+│   └── Resources/     # 13 API レスポンス整形
+├── UseCases/          # ドメイン別 UseCase（1クラス1操作）
+├── Models/            # 25 Eloquent モデル
+├── Services/          # GeminiService, NoteParser, AiAdvice など
+├── Infrastructure/
+│   └── Repositories/  # 19 Repository（Eloquent 実装）
+└── Enums/             # 12 Enum 定義
+```
+
+### 設計方針
+
+```
+Request → Controller → UseCase → Repository → Model
+                  ↕
+              Service（Gemini, NoteParser など）
+```
+
+- **Controller** はリクエストの受け取りとレスポンスの返却のみ
+- **UseCase** に業務ロジックを集約（1クラス1操作）
+- **Repository** でデータアクセスを抽象化
+- DI はコンストラクタインジェクションで統一
+
+### 主要モデルとリレーション
+
+```
+User
+├── UserProfile          # ニックネーム・目標・Gemini トークン
+├── AiUserProfile        # AI アドバイス用正規化プロフィール
+├── Subject[]
+│   ├── SubCategory[]
+│   └── SubjectSetting
+├── DailyLog[]
+│   └── StudySession[]
+├── Problem[]
+│   └── ProblemQuiz[]
+├── ExamSession[]
+│   └── ExamQuestion[]
+├── Sprint[]
+│   └── StudyTicket[]
+│       ├── TicketNote[]
+│       └── SubCategory[] (多対多)
+├── Stopwatch
+├── Snippet[]
+└── AlertSetting
+```
+
+---
+
+## API 一覧
+
+| グループ | 主なエンドポイント |
+|---------|-----------------|
+| Auth | `POST /auth/google`, `POST /auth/logout`, `GET /auth/me` |
+| Profile | `GET/PUT /profile` |
+| Subjects | `GET /subjects`, `PUT/DELETE /subjects/{name}` |
+| Daily Logs | `GET/POST /daily-logs`, `GET/PUT/DELETE /daily-logs/{date}` |
+| Study Sessions | `POST/PUT/DELETE /study-sessions` |
+| Problems | `GET/POST/PUT/DELETE /problems/{id}`, `GET/POST/DELETE /problems/{id}/quizzes` |
+| BugFix | `GET /morning-bugfix`, `GET /deg-bugfix` |
+| Practice | `GET/PUT/DELETE /practice/sessions/draft/{subject}`, `POST /practice/sessions` |
+| Exam | `GET/POST/PUT/DELETE /exam-sessions`, `PATCH /exam-sessions/{id}/questions/{order}` |
+| Sprints | `GET/POST/PUT/DELETE /sprints/{id}`, `POST /sprints/{id}/complete` |
+| Tickets | `GET/POST/PUT/DELETE /tickets/{id}`, `GET/POST/PUT/DELETE /tickets/{id}/notes` |
+| Stopwatch | `GET /stopwatch`, `POST /stopwatch/{start\|stop\|reset}` |
+| AI | `POST /ai/advice`, `POST /ai/analysis` |
+| Settings | `GET/PUT /gemini/settings`, `GET/PUT /monthly-settings/{year}/{month}` |
+| Snippets | `GET/POST/PUT/DELETE /snippets` |
+
+詳細は `doc/openapi.yaml` を参照。
+
+---
+
+## 主要ドメインの説明
+
+### Problem（問題）
+
+ミス・苦手問題のレコード。フィールドの意味:
+
+| カラム | 説明 |
+|-------|------|
+| `note` | マークダウン形式のノート。`#Definition` `#Formula` `#Keyword` などのハッシュタグが予約語 |
+| `proficiency` | 習熟度（Basic / Intermediate / Advanced / Expert）|
+| `failure_types` | 失敗属性 JSON（ケアレス / 理解不足 / 忘れ / その他）|
+| `is_good_question` | 良問フラグ（Deg Bugfix の選出条件）|
+| `is_formula` | 公式問題フラグ（NoteList フィルタで使用）|
+| `last_touched_at` | 最終確認日（BugFix の選出で古い順/新しい順に使用）|
+
+### BugFix の 3 モード
+
+| モード | エンドポイント | 選出条件 |
+|--------|--------------|---------|
+| Morning Bugfix | `GET /morning-bugfix` | ランダム選出（習熟度・失敗属性・最終確認日でスコアリング）|
+| Flash Bugfix | `GET /morning-bugfix?subject=...&...` | 科目・論点・属性・習熟度でフィルタ |
+| Deg Bugfix | `GET /deg-bugfix` | `is_good_question=true` かつ `#Definition` あり |
+
+すべての BugFix で `#Definition` を持つ問題のみが対象。
+
+### AI 機能
+
+- **Gemini API キー**: ユーザーが自身のキーをプロフィール画面で登録。DB に暗号化して保存。
+- **API レート制限**: フロントエンド側で RPD/RPM を管理（`apiWeights.ts`）。
+- **`AiUserProfile`**: ユーザープロフィールを AI に渡しやすい形に正規化したキャッシュ。プロフィール変更時に `UserProfileObserver` が自動更新。
+
+---
+
+## 不要コードの洗い出し
+
+### 削除を推奨
+
+#### `knowledge_digests` テーブル関連
+
+```
+app/Models/KnowledgeDigest.php
+app/Observers/ProblemObserver.php
+app/UseCases/KnowledgeDigest/ExtractKnowledgeDigestUseCase.php
+database/migrations/2026_05_19_000001_create_knowledge_digests_table.php
+```
+
+**理由**: `ProblemObserver` が Problem 保存時に自動書き込みしているが、**どの API からも読み出されていない**。BugFix カード生成は `GenerateBugfixCardUseCase` が `Problem.note` を直接 `NoteParser` で解析するため完全に冗長。
+
+#### `problem_quizzes.options` / `problem_quizzes.correct_index` カラム
+
+**理由**: 廃止した4択生成モード（旧 BugFix の `multiple_choice`）用のカラム。現在の BugFix はカード形式のみのため、新規データは入らない。
+
+### 要確認（UI での利用状況を確かめてから判断）
+
+#### `problem_quizzes` テーブル全体
+
+`/problems/{id}/quizzes` の CRUD エンドポイントは存在するが、現在のフロントエンド UI でどこから呼ばれているかを確認すること。使われていない場合はテーブルごと削除可能。
+
+#### Flashcard エンドポイント
+
+```
+GET /flashcards
+GET /subjects/{subject}/flashcards
+```
+
+`FlashcardController` に対応するルートが存在するが、フロントエンドで実際に表示しているページ・コンポーネントを確認すること。
+
+#### `practice_sessions` テーブル
+
+`POST /practice/sessions` で書き込まれるが、読み出す API が存在しない。ログ目的のみであれば整理を検討。
+
+### 既に削除済み（2026-05 改修）
+
+| 削除対象 | 理由 |
+|---------|------|
+| `BugfixSessionController` 他 3 コントローラ | BugFix リデザインで不要に |
+| `GenerateMorningQuizUseCase` 他 5 UseCase | 4択生成廃止 |
+| `/api/flash-card` エンドポイント | 同上 |
+| `problems.defeat_reason` カラム | マイグレーションで DROP 済み |
