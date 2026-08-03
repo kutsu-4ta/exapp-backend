@@ -15,6 +15,11 @@ class EloquentSubjectRepository implements SubjectRepositoryInterface
 {
     public function findAll(int $userId): Collection
     {
+        return Subject::where('user_id', $userId)->where('is_hidden', false)->orderBy('display_order')->get();
+    }
+
+    public function findAllIncludingHidden(int $userId): Collection
+    {
         return Subject::where('user_id', $userId)->orderBy('display_order')->get();
     }
 
@@ -34,6 +39,12 @@ class EloquentSubjectRepository implements SubjectRepositoryInterface
     public function rename(Subject $subject, string $newName): Subject
     {
         $subject->update(['name' => $newName]);
+        return $subject->fresh();
+    }
+
+    public function setHidden(Subject $subject, bool $hidden): Subject
+    {
+        $subject->update(['is_hidden' => $hidden]);
         return $subject->fresh();
     }
 

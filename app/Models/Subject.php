@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subject extends Model
 {
-    protected $fillable = ['user_id', 'name', 'display_order'];
+    protected $fillable = ['user_id', 'name', 'display_order', 'is_hidden'];
 
     protected function casts(): array
     {
         return [
             'display_order' => 'integer',
+            'is_hidden'      => 'boolean',
         ];
     }
 

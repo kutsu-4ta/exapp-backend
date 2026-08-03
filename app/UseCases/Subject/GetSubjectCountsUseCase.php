@@ -12,6 +12,7 @@ class GetSubjectCountsUseCase
     public function __invoke(int $userId): Collection
     {
         $subjects = Subject::where('user_id', $userId)
+            ->where('is_hidden', false)
             ->orderBy('display_order')
             ->get();
 

@@ -9,11 +9,15 @@ interface SubjectRepositoryInterface
 {
     public function findAll(int $userId): Collection;
 
+    public function findAllIncludingHidden(int $userId): Collection;
+
     public function findByName(int $userId, string $name): ?Subject;
 
     public function firstOrCreate(int $userId, string $name): Subject;
 
     public function rename(Subject $subject, string $newName): Subject;
+
+    public function setHidden(Subject $subject, bool $hidden): Subject;
 
     public function delete(Subject $subject): void;
 

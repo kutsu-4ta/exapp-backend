@@ -18,7 +18,7 @@ class GetSubjectAlertStatusUseCase
 
     public function __invoke(int $userId): array
     {
-        $subjects = Subject::where('user_id', $userId)->orderBy('display_order')->get();
+        $subjects = Subject::where('user_id', $userId)->where('is_hidden', false)->orderBy('display_order')->get();
 
         if ($subjects->isEmpty()) {
             return [];

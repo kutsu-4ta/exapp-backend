@@ -49,11 +49,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 科目
     Route::get('subjects', [SubjectController::class, 'index']);
+    Route::get('subjects/all', [SubjectController::class, 'indexAll']);
     Route::get('subjects/summary', [SubjectSummaryController::class, 'index']);
     Route::get('subjects/alert-status', [SubjectAlertStatusController::class, 'index']);
     Route::get('subjects/settings', [SubjectSettingsController::class, 'index']);
     Route::get('subjects/counts', [SubjectCountsController::class, 'index']);
     Route::put('subjects/{name}', [SubjectController::class, 'update']);
+    Route::put('subjects/{name}/hidden', [SubjectController::class, 'updateHidden']);
     Route::delete('subjects/{name}', [SubjectController::class, 'destroy']);
     Route::get('subjects/{subject}/flashcards', [FlashcardController::class, 'index']);
     Route::get('subjects/{subject}/alert-settings', [SubjectAlertSettingController::class, 'show']);

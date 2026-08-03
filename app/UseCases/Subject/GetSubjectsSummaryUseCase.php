@@ -22,7 +22,7 @@ class GetSubjectsSummaryUseCase
         $year  = $year  ?? $now->year;
         $month = $month ?? $now->month;
 
-        $subjects   = Subject::where('user_id', $userId)->orderBy('display_order')->get();
+        $subjects   = Subject::where('user_id', $userId)->where('is_hidden', false)->orderBy('display_order')->get();
         $subjectIds = $subjects->pluck('id');
 
         $settings = SubjectSetting::where('user_id', $userId)
